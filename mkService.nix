@@ -1,9 +1,10 @@
 {writeScript, stdenv}:
-{name, script, description ? ""}:
+{name, script, description ? "", startWithBoot ? true}:
 
 let
   service = {
     inherit script description;
+    wantedBy = if startWithBoot then [ "multi-user.target" ] else [];
   };
 in {
   inherit service;
