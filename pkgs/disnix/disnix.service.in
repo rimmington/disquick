@@ -1,0 +1,9 @@
+[Unit]
+
+[Service]
+Environment=PATH=@dysnomia@/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=HOME=/var/lib/disnix
+ExecStart=@disnix@/bin/disnix-service
+
+[Install]
+WantedBy=multi-user.target

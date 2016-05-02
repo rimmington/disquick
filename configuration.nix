@@ -1,6 +1,6 @@
 {config, pkgs, ...}:
 let
-  mkService = pkgs.callPackage /vagrant/mkService.nix {};
+  mkService = pkgs.callPackage /vagrant/pkgs/mkService.nix {};
   rails-test = pkgs.callPackage /vagrant/blog/service.nix { inherit mkService; };
 in
 with pkgs; {

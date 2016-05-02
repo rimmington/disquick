@@ -1,0 +1,33 @@
+diff --git a/scripts/disnix-copy-closure.in b/scripts/disnix-copy-closure.in
+index 7903434..3a6d59a 100644
+--- a/scripts/disnix-copy-closure.in
++++ b/scripts/disnix-copy-closure.in
+@@ -50,6 +50,8 @@ Environment:
+ 
+   DISNIX_CLIENT_INTERFACE    Sets the client interface (which defaults to:
+                              disnix-ssh-client)
++  DISNIX_IMPORT_SUDO         If "true", run "nix-store --import" via sudo to avoid
++                             signature issues.
+ EOF
+ }
+ 
+@@ -174,10 +176,16 @@ else
+     then
+         # Export the closure all the invalid paths
+         closure=`$interface --target $target --export --remotefile $invalidPaths`
+-    
++
++        if [ "$DISNIX_IMPORT_SUDO" == "true" ]; then
++            nixStoreCmd="sudo nix-store"
++        else
++            nixStoreCmd="nix-store"
++        fi
++
+         # Import the closure
+-        cat $closure | nix-store --import || (rm -f $closure; false)
+-        
++        cat $closure | $nixStoreCmd --import || (rm -f $closure; false)
++
+         # Remove the serialisation
+         rm -f $closure
+     fi
