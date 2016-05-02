@@ -1,10 +1,10 @@
-{config, pkgs, ...}:
+{config, pkgs, system, ...}:
 let
-  mkService = pkgs.callPackage /vagrant/pkgs/mkService.nix {};
-  rails-test = pkgs.callPackage /vagrant/blog/service.nix { inherit mkService; };
+  customPkgs = import /vagrant/pkgs { inherit pkgs system; };
+  rails-test = pkgs.callPackage /vagrant/blog/service.nix { inherit (customPkgs) mkService; };
 in
 with pkgs; {
-  environment.systemPackages = [ git ];
+  environment.systemPackages = [ git which customPkgs.disnix ];
   services.nixosManual.enable = false;
 
   nix.binaryCaches = [
