@@ -1,10 +1,10 @@
 {config, pkgs, system, ...}:
 let
   customPkgs = import /vagrant/pkgs { inherit pkgs system; };
-  rails-test = pkgs.callPackage /vagrant/blog/service.nix { inherit (customPkgs) mkService; };
+  rails-test = customPkgs.callPackage /vagrant/blog/service.nix {};
 in
-with pkgs; {
-  environment.systemPackages = [ git which customPkgs.disnix ];
+with customPkgs; {
+  environment.systemPackages = [ git which disnix ];
   services.nixosManual.enable = false;
 
   nix.binaryCaches = [
@@ -19,5 +19,5 @@ with pkgs; {
     3000
   ];
 
-  systemd.services.rails-test = (rails-test { bindAddress = "192.168.100.65"; }).service;
+  systemd.services = (rails-test { bindAddress = "192.168.100.65"; }).serviceAttr;
 }
