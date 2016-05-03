@@ -5,4 +5,5 @@ pkgs.overridePackages (self: super: {
   disnix = self.callPackage ./disnix { inherit (super) disnix; };
   dysnomiaDebian = self.callPackage ./dysnomia-debian.nix {};
   disnixDebian = self.callPackage ./disnix/debian.nix {};
+  disquick = self.callPackage ./disquick {};
 })
