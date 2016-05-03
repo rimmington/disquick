@@ -16,9 +16,11 @@ def mk_distribution(service_names):
 def mk_services(filename, infrastructure):
     return "{{system, pkgs, distribution, invDistribution}}: import {} {{ inherit pkgs; infrastructure = import {}; }}".format(filename, infrastructure)
 
-def writefile(fn, content):
+def writefile(fn, content, end="\n"):
     with open(fn, "w") as f:
         f.write(content)
+        if end:
+            f.write(end)
     return fn
 
 def get_service_names(filename, infrastructure):
