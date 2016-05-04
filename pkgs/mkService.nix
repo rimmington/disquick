@@ -1,5 +1,5 @@
 {writeScript, buildEnv, writeTextFile, stdenv}:
-{name, script, description ? "", startWithBoot ? true}:
+{name, script, description ? "", startWithBoot ? true}@attrs:
 
 let
   service = {
@@ -17,7 +17,7 @@ let
     ];
   };
 in {
-  inherit service;
+  inherit attrs;
   serviceAttr = builtins.listToAttrs [ { inherit name; value = service; } ];
   script = scriptDrv;
   disnix = {
