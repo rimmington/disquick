@@ -1,4 +1,5 @@
 [Unit]
+Description=Exposes deployment operations to remote machines that are carried out by Nix and Dysnomia
 
 [Service]
 Environment=PATH=@dysnomia@/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
