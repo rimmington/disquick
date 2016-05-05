@@ -54,7 +54,7 @@ def main(argv):
     args = parser.parse_args(argv[1:])
 
     with tempfile.TemporaryDirectory() as d:
-        tempdir = args.tempdir or d
+        tempdir = os.path.abspath(args.tempdir or d)
         if args.infrastructure:
             infrastructure = args.infrastructure
         elif args.target and args.system:
