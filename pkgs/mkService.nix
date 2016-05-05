@@ -29,6 +29,10 @@ let
     name = "service-${name}";
     paths = [
       (writeTextFile { name = "${name}-disnix-process-config"; destination = "/etc/process_config"; text = ''container_process=${rootScript}''; })
+      (writeTextFile { name = "${name}-disnix-systemd-config"; destination = "/etc/systemd-config"; text = ''
+        [Unit]
+        Description=${description}
+      ''; })
     ];
   };
 in {

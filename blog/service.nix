@@ -4,5 +4,6 @@ let
   pkg = callPackage (import ./default.nix) { inherit dataDir; };
 in mkService {
   name = "rails-test";
+  description = "Ruby on Rails test service";
   script = "exec ${pkg}/bin/rails-test -b ${bindAddress} -p ${port}";
 }
