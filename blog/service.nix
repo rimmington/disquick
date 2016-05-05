@@ -1,5 +1,4 @@
-{callPackage, mkService}:
-{bindAddress ? "localhost", port ? "3000", dataDir ? "/var/lib/rails-test"}:
+{callPackage, mkService, bindAddress ? "localhost", port ? "3000", dataDir ? "/var/lib/rails-test"}:
 
 let
   pkg = callPackage (import ./default.nix) { inherit dataDir; };
