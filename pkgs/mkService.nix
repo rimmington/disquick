@@ -1,16 +1,22 @@
 {writeScript, buildEnv, writeTextFile, lib, stdenv, busybox, remoteShadow, coreutils, findutils, gnugrep, gnused, systemd}:
-{name, script, preStartRootScript ? "", description ? "", startWithBoot ? true, user ? "root", addUser ? false, environment ? {}, path ? []}@attrs:
+{name, script, preStartRootScript ? "", description ? "", startWithBoot ? true, user ? "root", addUser ? false, dependsOn ? [], environment ? {}, path ? []}@attrs:
+
+# TODO: Some way to ensure dependencies are definitely included, eg. the Disnix way
 
 assert ! (environment ? PATH);  # Use path over environment.PATH
 
 let
-  service = {
-    inherit description environment path;
-    wantedBy = if startWithBoot then [ "multi-user.target" ] else [];
-    serviceConfig = {
-      ExecStart = execStart;
-    } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; };
-  };
+  service =
+    let depNames = map (s: s.attrs.name + ".service") dependsOn;
+    in {
+      inherit description environment path;
+      wantedBy = if startWithBoot then [ "multi-user.target" ] else [];
+      serviceConfig = {
+        ExecStart = execStart;
+      } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; };
+      wants = depNames;
+      after = depNames;
+    };
   execStartPre = if preStartRootScript != "" || addUser
     then writeScript "${name}-prestart" ''
       #!${stdenv.shell} -e
@@ -46,22 +52,25 @@ in {
   disnix = {
     inherit name;
     type = "process";
-    dependsOn = {};
-    pkg = buildEnv {
-      name = "service-${name}";
-      paths = [
-        (writeTextFile { name = "${name}-disnix-process-config"; destination = "/etc/process_config"; text = ''container_process=${execStart}''; })
-        (writeTextFile { name = "${name}-disnix-systemd-config"; destination = "/etc/systemd-config"; text = ''
+    dependsOn = builtins.listToAttrs (map (s: { name = s.attrs.name; value = s.disnix; }) dependsOn);
+    pkg =
+      let
+        env = buildEnv {
+          name = "service-${name}";
+          paths = [
+            (writeTextFile { name = "${name}-disnix-process-config"; destination = "/etc/process_config"; text = ''container_process="${execStart}"''; })
+            (writeTextFile { name = "${name}-disnix-systemd-config"; destination = "/etc/systemd-config"; text = ''
 
-          [Unit]
-          Description=${description}
+              [Unit]
+              Description=${description}
 
-          [Service]
-          ${lib.optionalString (execStartPre != "") "ExecStartPre=${execStartPre}"}
-          ${envDeclsGen "Environment="}
-        ''; })
-      ];
-    };
+              [Service]
+              ${lib.optionalString (execStartPre != "") "ExecStartPre=${execStartPre}"}
+              ${envDeclsGen "Environment="}
+            ''; })
+          ];
+        };
+      in if dependsOn == [] then env else (_dependsOn: env);
   };
 
   script = writeScript "${name}-now" ''
