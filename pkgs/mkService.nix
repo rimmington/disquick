@@ -1,4 +1,4 @@
-{writeScript, buildEnv, writeTextFile, lib, stdenv, busybox, shadow}:
+{writeScript, buildEnv, writeTextFile, lib, stdenv, busybox, shadow, coreutils, findutils, gnugrep, gnused, systemd}:
 {name, script, preStartRootScript ? "", description ? "", startWithBoot ? true, user ? "root", addUser ? false}@attrs:
 
 let
@@ -30,6 +30,10 @@ let
       if user == "root"
         then "${userScript}"
         else "${busybox}/bin/busybox chpst -u ${user} ${userScript}";
+  pathValue =
+    let
+      defaultPathPkgs = [ coreutils findutils gnugrep gnused systemd ];
+    in lib.concatStringsSep ":" (map (d: "${d}/bin") defaultPathPkgs ++ map (d: "${d}/sbin") defaultPathPkgs);
 in {
   inherit attrs;
 
@@ -47,10 +51,10 @@ in {
 
           [Unit]
           Description=${description}
-        '' + lib.optionalString (execStartPre != "") ''
 
           [Service]
-          ExecStartPre=${execStartPre}
+          ${lib.optionalString (execStartPre != "") "ExecStartPre=${execStartPre}"}
+          Environment=PATH=${pathValue}
         ''; })
       ];
     };
@@ -58,6 +62,7 @@ in {
 
   script = writeScript "${name}-now" ''
     #!${stdenv.shell} -e
+    export PATH=${pathValue}
     ${execStartPre}
     ${execStart}
   '';
