@@ -6,4 +6,5 @@ pkgs.overridePackages (self: super: {
   dysnomiaDebian = self.callPackage ./dysnomia-debian.nix {};
   disnixDebian = self.callPackage ./disnix/debian.nix {};
   disquick = self.callPackage ./disquick {};
+  remoteShadow = self.callPackage ./remoteShadow.nix {};
 })

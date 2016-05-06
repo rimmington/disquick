@@ -1,4 +1,4 @@
-{writeScript, buildEnv, writeTextFile, lib, stdenv, busybox, shadow, coreutils, findutils, gnugrep, gnused, systemd}:
+{writeScript, buildEnv, writeTextFile, lib, stdenv, busybox, remoteShadow, coreutils, findutils, gnugrep, gnused, systemd}:
 {name, script, preStartRootScript ? "", description ? "", startWithBoot ? true, user ? "root", addUser ? false, environment ? {}, path ? []}@attrs:
 
 assert ! (environment ? PATH);  # Use path over environment.PATH
@@ -16,7 +16,7 @@ let
       #!${stdenv.shell} -e
       ${lib.optionalString addUser ''
         if ! ${stdenv.glibc.bin}/bin/getent passwd ${user} > /dev/null; then
-          ${shadow}/bin/useradd --system --user-group ${user}
+          ${remoteShadow}/bin/useradd --system --user-group ${user}
         fi
       ''}
       ${preStartRootScript}
