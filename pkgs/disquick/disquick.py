@@ -14,7 +14,7 @@ def mk_distribution(service_names):
     return "{{infrastructure}}: {{ {} }}".format(" ".join(n + " = builtins.attrValues infrastructure;" for n in service_names))
 
 def mk_services(filename, infrastructure):
-    return "{{system, pkgs, distribution, invDistribution}}: import {} {{ inherit pkgs; infrastructure = import {}; }}".format(filename, infrastructure)
+    return "{{system, pkgs, distribution, invDistribution}}: pkgs.lib.mapAttrs' (name: s: {{ name = s.attrs.name; value = s.disnix; }}) (import {} {{ inherit pkgs; infrastructure = import {}; }})".format(filename, infrastructure)
 
 def writefile(fn, content, end="\n"):
     with open(fn, "w") as f:
@@ -24,7 +24,7 @@ def writefile(fn, content, end="\n"):
     return fn
 
 def get_service_names(filename, infrastructure):
-    expr = "builtins.toJSON (builtins.attrNames (import {} {{ pkgs = import <nixpkgs> {{}}; infrastructure = import {}; }}))".format(filename, infrastructure)
+    expr = "with import <nixpkgs> {{}}; builtins.toJSON (lib.mapAttrsToList (n: s: s.attrs.name) (import {} {{ inherit pkgs; infrastructure = import {}; }}))".format(filename, infrastructure)
     out = subprocess.check_output(["nix-instantiate", "--eval", "--expr", expr], universal_newlines=True)
     in_string = json.loads(out)
     return json.loads(in_string)
