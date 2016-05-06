@@ -6,9 +6,9 @@ stdenv.mkDerivation {
   buildInputs = [ python3 ];
   installPhase = ''
     mkdir -p $out/bin
-    substitute ./disquick.py $out/bin/disquick \
+    substitute ./disenv.py $out/bin/disenv \
       --replace disnix-env ${disnix}/bin/disnix-env \
       --replace python3 ${python3}/bin/python3
-    chmod a+x $out/bin/disquick
+    chmod a+x $out/bin/*
   '';
 }
