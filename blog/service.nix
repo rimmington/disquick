@@ -6,4 +6,7 @@ in mkService {
   name = "rails-test";
   description = "Ruby on Rails test service";
   script = "exec ${pkg}/bin/rails-test -b ${bindAddress} -p ${port}";
+  preStartRootScript = ''echo "WOO $WOO" > /root/rails-test'';
+  path = [ pkg ];
+  environment.WOO = "HOO";
 }

@@ -1,9 +1,11 @@
 {writeScript, buildEnv, writeTextFile, lib, stdenv, busybox, shadow, coreutils, findutils, gnugrep, gnused, systemd}:
-{name, script, preStartRootScript ? "", description ? "", startWithBoot ? true, user ? "root", addUser ? false}@attrs:
+{name, script, preStartRootScript ? "", description ? "", startWithBoot ? true, user ? "root", addUser ? false, environment ? {}, path ? []}@attrs:
+
+assert ! (environment ? PATH);  # Use path over environment.PATH
 
 let
   service = {
-    inherit description;
+    inherit description environment path;
     wantedBy = if startWithBoot then [ "multi-user.target" ] else [];
     serviceConfig = {
       ExecStart = execStart;
@@ -33,7 +35,9 @@ let
   pathValue =
     let
       defaultPathPkgs = [ coreutils findutils gnugrep gnused systemd ];
-    in lib.concatStringsSep ":" (map (d: "${d}/bin") defaultPathPkgs ++ map (d: "${d}/sbin") defaultPathPkgs);
+      finalPath = path ++ defaultPathPkgs;
+    in lib.concatStringsSep ":" (map (d: "${d}/bin") finalPath ++ map (d: "${d}/sbin") finalPath);
+  envDeclsGen = prefix: lib.concatStringsSep "\n" (lib.mapAttrsToList (name: value: "${prefix}${name}=${value}") (environment // { PATH = pathValue; }));
 in {
   inherit attrs;
 
@@ -54,7 +58,7 @@ in {
 
           [Service]
           ${lib.optionalString (execStartPre != "") "ExecStartPre=${execStartPre}"}
-          Environment=PATH=${pathValue}
+          ${envDeclsGen "Environment="}
         ''; })
       ];
     };
@@ -62,7 +66,7 @@ in {
 
   script = writeScript "${name}-now" ''
     #!${stdenv.shell} -e
-    export PATH=${pathValue}
+    ${envDeclsGen "export "}
     ${execStartPre}
     ${execStart}
   '';
