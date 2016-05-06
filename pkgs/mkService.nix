@@ -30,21 +30,6 @@ let
       if user == "root"
         then "${userScript}"
         else "${busybox}/bin/busybox chpst -u ${user} ${userScript}";
-  disnixDrv = buildEnv {
-    name = "service-${name}";
-    paths = [
-      (writeTextFile { name = "${name}-disnix-process-config"; destination = "/etc/process_config"; text = ''container_process=${execStart}''; })
-      (writeTextFile { name = "${name}-disnix-systemd-config"; destination = "/etc/systemd-config"; text = ''
-
-        [Unit]
-        Description=${description}
-      '' + lib.optionalString (execStartPre != "") ''
-
-        [Service]
-        ExecStartPre=${execStartPre}
-      ''; })
-    ];
-  };
 in {
   inherit attrs;
 
@@ -52,9 +37,23 @@ in {
 
   disnix = {
     inherit name;
-    pkg = disnixDrv;
-    dependsOn = {};
     type = "process";
+    dependsOn = {};
+    pkg = buildEnv {
+      name = "service-${name}";
+      paths = [
+        (writeTextFile { name = "${name}-disnix-process-config"; destination = "/etc/process_config"; text = ''container_process=${execStart}''; })
+        (writeTextFile { name = "${name}-disnix-systemd-config"; destination = "/etc/systemd-config"; text = ''
+
+          [Unit]
+          Description=${description}
+        '' + lib.optionalString (execStartPre != "") ''
+
+          [Service]
+          ExecStartPre=${execStartPre}
+        ''; })
+      ];
+    };
   };
 
   script = writeScript "${name}-now" ''
