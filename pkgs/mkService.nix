@@ -59,10 +59,12 @@ in {
           name = "service-${name}";
           paths = [
             (writeTextFile { name = "${name}-disnix-process-config"; destination = "/etc/process_config"; text = ''container_process="${execStart}"''; })
-            (writeTextFile { name = "${name}-disnix-systemd-config"; destination = "/etc/systemd-config"; text = ''
+            (writeTextFile { name = "${name}-disnix-systemd-config"; destination = "/etc/systemd-config"; text =
+              lib.optionalString (description != "") ''
 
               [Unit]
               Description=${description}
+              '' + ''
 
               [Service]
               ${lib.optionalString (execStartPre != "") "ExecStartPre=${execStartPre}"}
