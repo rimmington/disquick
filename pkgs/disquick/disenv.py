@@ -41,7 +41,7 @@ def run(filename, infrastructure, tempdir, ssh_user=None):
     env['DISNIX_IMPORT_SUDO'] = 'true'
     if ssh_user:
         env['SSH_USER'] = ssh_user
-    subprocess.check_call(["disnix-env", "-i", infrastructure, "-d", distribution, "-s", services, "--show-trace", "--build-on-targets"], env=env)
+    subprocess.check_call(['nix-shell', '-p', 'disnix', '--run', 'disnix-env -i "{}" -d "{}" -s "{}" --show-trace --build-on-targets'.format(infrastructure, distribution, services)], env=env)
 
 def main(argv):
     parser = argparse.ArgumentParser()
