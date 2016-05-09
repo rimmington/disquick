@@ -10,7 +10,7 @@ Vagrant.configure(2) do |config|
       v.memory = 4096
       v.cpus = 1
     end
-    c.vm.provision :nixos, run: 'always', path: 'configuration.nix', verbose: true, NIX_PATH: 'nixpkgs=/vagrant/pkgs'
+    c.vm.provision :nixos, run: 'always', path: 'configuration.nix', verbose: true, NIX_PATH: 'nixpkgs=https://github.com/rimmington/nixpkgs/archive/934a460fd2fdd7667fa2928275aa7e0cbcab5feb.tar.gz'
   end
 
 #  config.vm.define "thebuntu" do |c|
