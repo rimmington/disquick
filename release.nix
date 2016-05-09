@@ -6,10 +6,9 @@ let
   lib = (import nixpkgs {}).lib;
 in lib.genAttrs systems (system:
   let
-    pkgs = import "${tanks-on-rails}/pkgs" { pkgs = import nixpkgs { inherit system; }; };
-    service = pkgs.callPackage "${tanks-on-rails}/blog/service.nix" {};
+    pkgs = import tanks-on-rails { pkgs = import nixpkgs { inherit system; }; };
   in {
     inherit (pkgs) disnixDebian disquick;
-    rails-test = { inherit (service) script; };
+    # TODO: tests
   }
 )
