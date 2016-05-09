@@ -1,4 +1,4 @@
-{python3, nix, disnix, stdenv}:
+{python3, nix, disnix, stdenv, systemd}:
 
 stdenv.mkDerivation {
   name = "disquick";
@@ -7,8 +7,9 @@ stdenv.mkDerivation {
   installPhase = ''
     mkdir -p $out/bin
     substitute ./disenv.py $out/bin/disenv \
-      --replace disnix-env ${disnix}/bin/disnix-env \
-      --replace python3 ${python3}/bin/python3
+      --replace disnix-env ${disnix}/bin/disnix-env
+    substitute ./disctl.py $out/bin/disctl \
+      --replace systemctl ${systemd}/bin/systemctl
     chmod a+x $out/bin/*
   '';
 }
