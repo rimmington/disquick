@@ -23,4 +23,11 @@ stdenv.mkDerivation rec {
     help2man -S 'disquick ${version}' --name "$(ARGPARSE2MAN_DESC=1 $out/bin/disenv)" -i disenv.1.h2m $out/bin/disenv > $out/share/man/man1/disenv.1
     help2man -S 'disquick ${version}' --name "$(ARGPARSE2MAN_DESC=1 $out/bin/disctl)" -i disctl.1.h2m $out/bin/disctl > $out/share/man/man1/disctl.1
   '';
+
+  meta = {
+    homepage = https://github.com/rimmington/disquick;
+    description = "Single-target Disnix tools";
+    license = lib.licenses.bsd3;
+    platforms = lib.platforms.linux;
+  };
 }
