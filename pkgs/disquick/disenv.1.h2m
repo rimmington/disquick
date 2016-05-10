@@ -1,0 +1,56 @@
+-N
+
+[DESCRIPTION]
+.B disenv
+is used to install or upgrade a service-oriented system on a remote system.
+.PP
+This command requires a Nix expression describing the services model to be deployed. On invocation, services and their dependencies are built as required. If all the services are successfully built, the closures of the services are transferred to the target system. Finally, the services are activated in a dependency-sensitive order.
+.PP
+Only those components that have changed since the last invocation are deployed. If a service is removed from the model, the service is removed from the remote system.
+.PP
+In case of a failure, a rollback is performed to bring the system back in its previous configuration.
+.PP
+Disquick is based on the Disnix project by Sander van der Burg,
+.RI < https://nixos.org/disnix >.
+
+[FILES]
+.TP
+services.nix
+Should contain a Nix function from an attrset
+.I {pkgs, infrastructure}
+to an attrset with
+.I mkService
+values. For example, a services.nix that describes a simple directory server could be as follows:
+.PP
+.nf
+.RS
+{pkgs, infrastructure}:
+{
+  simple-http-server = pkgs.mkService {
+    name = "simple-http-server";
+    description = "A server that serves itself.";
+    path = [ pkgs.python3 ];
+    script = ''
+      cd ${./.}
+      python3 -m http.server
+    '';
+  };
+}
+.RE
+.fi
+
+[EXAMPLES]
+Setup services on a Raspberry Pi 2.
+.PP
+.nf
+.RS
+disenv -s services.nix --ssh-user pi -t raspberrypi2.local -y armv7l-linux
+.RE
+.fi
+
+[COPYRIGHT]
+Copyright \(co 2016 Deakin Software and Technology Innovation Lab.
+
+[SEE ALSO]
+.BR disctl (1),
+.BR disnix-env (1)

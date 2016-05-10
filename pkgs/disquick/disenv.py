@@ -9,6 +9,12 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.append('libexec')
+
+import argparse2man
+
+__description__ = 'Installs or updates the service environment of a remote system'
+
 def mk_infrastructure(hostname, system):
     return """{{ target = {{ hostname = "{}"; system = "{}"; }}; }}""".format(hostname, system)
 
@@ -88,14 +94,14 @@ def run(filename, target, system, tempdir, ssh_user=None):
         update_remote_coordinator_profile(profile_path, target, ssh_user)
 
 def main(argv):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--services", help="services.nix file", required=True)
+    parser = argparse2man.new_parser(__description__)
+    parser.add_argument("-s", "--services", help="services.nix file", required=True, metavar='services.nix')
     # parser.add_argument("-i", "--infrastructure", help="infrastructure.nix file")
     parser.add_argument("-t", "--target", help="Target hostname", required=True)
     parser.add_argument("-y", "--system", help="Target system (i686-linux, armv7l-linux, ..)", required=True)
     parser.add_argument("--ssh-user", help="User to SSH into")
     parser.add_argument("--tempdir", help="Temporary directory to store generated files")
-    args = parser.parse_args(argv[1:])
+    args = parser.parse_args(argv)
 
     with tempfile.TemporaryDirectory() as d:
         tempdir = os.path.abspath(args.tempdir or d)

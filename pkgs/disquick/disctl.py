@@ -1,8 +1,15 @@
 #!python3
 
 import argparse
+import os
 import subprocess
 import sys
+
+sys.path.append('libexec')
+
+import argparse2man
+
+__description__ = 'View and modify local service state'
 
 def find_service(name, lines, start):
     for l in lines:
@@ -33,8 +40,8 @@ def det_service_full_name(pattern):
         return pattern
 
 def main(argv):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('service', help='Service name, without any Disnix prefix', nargs='?')
+    parser = argparse2man.new_parser(__description__)
+    parser.add_argument('service', help='Service name, without any Disnix prefix', nargs='?', metavar='SERVICE')
     actions = parser.add_mutually_exclusive_group()
     actions.add_argument('-l', '--start', help='Launch the service', action='store_true')
     actions.add_argument('-e', '--stop', help='End the service', action='store_true')
