@@ -19,7 +19,7 @@ def find_service(name, lines, start):
 
 def disnix_running():
     try:
-        subprocess.check_call(['systemctl', 'list-units', 'disnix.service'], stdout=subprocess.DEVNULL)
+        subprocess.check_call(['systemctl', 'status', 'disnix.service'], stdout=subprocess.DEVNULL)
     except subprocess.CalledProcessError as e:
         if e.returncode == 3:
             return False
