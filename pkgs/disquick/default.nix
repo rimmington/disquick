@@ -1,9 +1,9 @@
-{python3, nix, disnix, stdenv, systemd}:
+{python35, nix, disnix, stdenv, systemd}:
 
 stdenv.mkDerivation {
   name = "disquick";
   src = ./.;
-  buildInputs = [ python3 ];
+  buildInputs = [ python35 ];
   installPhase = ''
     mkdir -p $out/bin
     substitute ./disenv.py $out/bin/disenv \
