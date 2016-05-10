@@ -12,7 +12,7 @@ def find_service(name, lines, start):
 
 def disnix_running():
     try:
-        subprocess.check_call(['systemctl', 'status', 'disnix.service'], stdout=subprocess.DEVNULL)
+        subprocess.check_call(['systemctl', 'list-units', 'disnix.service'], stdout=subprocess.DEVNULL)
     except subprocess.CalledProcessError as e:
         if e.returncode == 3:
             return False
@@ -24,7 +24,7 @@ def disnix_running():
 def det_service_full_name(pattern):
     if disnix_running():
         out = subprocess.check_output(['systemctl', 'list-dependencies', 'dysnomia.target'], universal_newlines=True)
-        name = find_service(pattern, lines, 4)
+        name = find_service(pattern, out.split('\n')[1:], 52)
         if name:
             return name[4:]
         else:
