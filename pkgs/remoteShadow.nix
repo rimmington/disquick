@@ -15,6 +15,7 @@ in runCommand "remote-shadow" {} ''
   mkdir -p $out/bin
 
   ${trySbin "/usr/sbin/useradd" shadow}
+  ${trySbin "/usr/sbin/usermod" shadow}
   ${trySbin "/bin/su" su}
 
   chmod +x $out/bin/*
