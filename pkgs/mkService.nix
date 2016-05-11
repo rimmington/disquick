@@ -1,5 +1,5 @@
 {writeScript, buildEnv, writeTextFile, lib, stdenv, busybox, remoteShadow, shadow, coreutils, findutils, gnugrep, gnused, systemd}:
-{name, script, preStartRootScript ? "", description ? "", startWithBoot ? true, user ? {}, dependsOn ? [], environment ? {}, path ? []}@attrs:
+{name, script, preStartRootScript ? "", postStartScript ? "", description ? "", startWithBoot ? true, user ? {}, dependsOn ? [], environment ? {}, path ? []}@attrs:
 
 # TODO: Some way to ensure dependencies are definitely included, eg. the Disnix way
 # TODO: Validate no conflicting user attributes, eg. different homes
@@ -28,7 +28,8 @@ let
       wantedBy = if startWithBoot then [ "multi-user.target" ] else [];
       serviceConfig = {
         ExecStart = execStart;
-      } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; };
+      } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
+        // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; };
       wants = depNames;
       after = depNames;
     };
@@ -56,16 +57,15 @@ let
       ''}
       ${preStartRootScript}''
     else "";
+  runAsUser = exec: if user.name == "root" then exec else "${busybox}/bin/busybox chpst -u ${user.name} ${exec}";
   execStart =
     let
       userScript = writeScript "${name}-start" ''
         #!${stdenv.shell} -e
         ${lib.optionalString user.createHome "cd ${user.home}"}
         ${script}'';
-    in
-      if user.name == "root"
-        then "${userScript}"
-        else "${busybox}/bin/busybox chpst -u ${user.name} ${userScript}";
+    in runAsUser "${userScript}";
+  execStartPost = lib.optionalString (postStartScript != "") (runAsUser "${writeScript "${name}-poststart" "#!${stdenv.shell} -e\n${postStartScript}"}");
   pathValue =
     let
       defaultPathPkgs = [ coreutils findutils gnugrep gnused systemd ];
@@ -96,6 +96,7 @@ in {
 
               [Service]
               ${lib.optionalString (execStartPre != "") "ExecStartPre=${execStartPre}"}
+              ${lib.optionalString (execStartPost != "") "ExecStartPost=${execStartPost}"}
               ${envDeclsGen "Environment="}
             ''; })
           ];
@@ -108,5 +109,6 @@ in {
     ${envDeclsGen "export "}
     ${execStartPre}
     ${execStart}
+    ${execStartPost}
   '';
 }
