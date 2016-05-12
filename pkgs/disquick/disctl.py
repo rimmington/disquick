@@ -39,6 +39,23 @@ def det_service_full_name(pattern):
     else:
         return pattern
 
+def subprocess_output(args):
+    proc = subprocess.Popen(args, universal_newlines=True, stdout=subprocess.PIPE)
+    (stdout, stderr) = proc.communicate()
+    return stdout
+
+def colour(colour, msg):
+    return '\033[{}{}\033[0m'.format(colour, msg)
+
+RED = '38;5;196m'
+
+def print_system_status():
+    subprocess.check_call(['systemctl', 'status'])
+    if subprocess_output(['systemctl', 'is-system-running']).strip() == 'degraded':
+        print('\nSome units have {}:'.format(colour(RED, 'failed')))
+        # Strip systemctl help footer
+        subprocess.check_call('SYSTEMD_COLORS=1 systemctl --failed | head -n-3', shell=True)
+
 def main(argv):
     parser = argparse2man.new_parser(__description__)
     parser.add_argument('service', help='Service name, without any Disnix prefix', nargs='?', metavar='SERVICE')
@@ -46,10 +63,15 @@ def main(argv):
     actions.add_argument('-l', '--start', help='Launch the service', action='store_true')
     actions.add_argument('-e', '--stop', help='End the service', action='store_true')
     actions.add_argument('-j', '--journal', help='Show service journal', action='store_true')
+    actions.add_argument('--clear-failed', help='Clear one or all failed services', action='store_true')
     args = parser.parse_args(argv)
 
     if not args.service:
-        sys.exit(subprocess.call(['systemctl', 'status']))
+        if args.clear_failed:
+            sys.exit(subprocess.call(['sudo', 'systemctl', 'reset-failed']))
+        else:
+            print_system_status()
+            return
 
     name = det_service_full_name(args.service)
     if not name:
@@ -61,6 +83,8 @@ def main(argv):
         sys.exit(subprocess.call(['sudo', 'systemctl', 'stop', name]))
     elif args.journal:
         sys.exit(subprocess.call(['sudo', 'journalctl', '-u', name]))
+    elif args.clear_failed:
+        sys.exit(subprocess.call(['sudo', 'systemctl', 'reset-failed', name]))
     else:
         sys.exit(subprocess.call(['systemctl', 'status', name]))
 
