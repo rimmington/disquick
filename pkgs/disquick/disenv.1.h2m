@@ -48,6 +48,11 @@ disenv -s services.nix --ssh-user pi -t raspberrypi2.local -y armv7l-linux
 .RE
 .fi
 
+[CAVEATS]
+The remote user needs passwordless
+.B sudo nix-store
+access.
+
 [COPYRIGHT]
 Copyright \(co 2016 Deakin Software and Technology Innovation Lab.
 
