@@ -16,6 +16,7 @@
 # TODO: Validate no conflicting user attributes, eg. different homes
 # TODO: Networking
 # TODO: RequiresMountsFor
+# TODO: Good security defaults, see systemd.service(5) and links
 
 /* DOC: User properties
 If create is true, user exists and the following properties hold:
