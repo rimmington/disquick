@@ -1,8 +1,21 @@
 {writeScript, buildEnv, writeTextFile, lib, stdenv, busybox, remoteShadow, shadow, coreutils, findutils, gnugrep, gnused, systemd}:
-{name, script, preStartRootScript ? "", postStartScript ? "", description ? "", startWithBoot ? true, user ? {}, dependsOn ? [], environment ? {}, path ? []}@attrs:
+
+{ name
+, script
+, preStartRootScript ? ""
+, postStartScript ? ""
+, description ? ""
+, startWithBoot ? true
+, user ? {}
+, dependsOn ? []
+, environment ? {}
+, path ? []
+}@attrs:
 
 # TODO: Some way to ensure dependencies are definitely included, eg. the Disnix way
 # TODO: Validate no conflicting user attributes, eg. different homes
+# TODO: Networking
+# TODO: RequiresMountsFor
 
 /* DOC: User properties
 If create is true, user exists and the following properties hold:
@@ -71,42 +84,45 @@ let
       defaultPathPkgs = [ coreutils findutils gnugrep gnused systemd ];
       finalPath = path ++ defaultPathPkgs;
     in lib.concatStringsSep ":" (map (d: "${d}/bin") finalPath ++ map (d: "${d}/sbin") finalPath);
-  envDeclsGen = prefix: lib.concatStringsSep "\n" (lib.mapAttrsToList (name: value: "${prefix}${name}=${value}") (environment // { PATH = pathValue; }));
+  envDeclsGen = prefix: (lib.mapAttrsToList (name: value: "${prefix}${name}=${value}") (environment // { PATH = pathValue; }));
 in {
   inherit attrs;
 
   serviceAttr = builtins.listToAttrs [ { inherit name; value = service; } ];
 
-  disnix = {
-    inherit name;
-    type = "process";
-    dependsOn = builtins.listToAttrs (map (s: { name = s.attrs.name; value = s.disnix; }) dependsOn);
-    pkg =
-      let
-        env = buildEnv {
-          name = "service-${name}";
-          paths = [
-            (writeTextFile { name = "${name}-disnix-process-config"; destination = "/etc/process_config"; text = ''container_process="${execStart}"''; })
-            (writeTextFile { name = "${name}-disnix-systemd-config"; destination = "/etc/systemd-config"; text =
-              lib.optionalString (description != "") ''
+  disnix =
+    let _pkg = buildEnv {
+      name = "service-${name}";
+      paths = [
+        (writeTextFile { name = "${name}-disnix-process-config"; destination = "/etc/process_config"; text = ''container_process="${execStart}"''; })
+        (writeTextFile { name = "${name}-disnix-systemd-config"; destination = "/etc/systemd-config"; text =
+          let
+            section = name: items: lib.optionals (items != []) ([ "[${name}]" ] ++ items ++ [ "" ]);
+            unit = section "Unit" (
+              lib.optional (description != "") "Description=${description}" ++
+              lib.optionals (dependsOn != []) (
+                let value = lib.concatMapStringsSep " " (s: "disnix-${baseNameOf s.disnix._pkg.outPath}.service") dependsOn;
+                in [ "Wants=${value}" "After=${value}" ]));
+            install = section "Install" (
+              lib.optional startWithBoot "WantedBy=multi-user.target");
+            service = section "Service" (
+              (envDeclsGen "Environment=") ++
+              (lib.optional (execStartPre != "") "ExecStartPre=${execStartPre}") ++
+              (lib.optional (execStartPost != "") "ExecStartPost=${execStartPost}"));
+          in "\n" + lib.concatStringsSep "\n" (unit ++ install ++ service); })
+      ];
+    };
+    in {
+      inherit name _pkg;
+      type = "process";
+      dependsOn = builtins.listToAttrs (map (s: { name = s.attrs.name; value = s.disnix; }) dependsOn);
+      pkg = if dependsOn == [] then _pkg else (_dependsOn: _pkg);
+    };
 
-              [Unit]
-              Description=${description}
-              '' + ''
-
-              [Service]
-              ${lib.optionalString (execStartPre != "") "ExecStartPre=${execStartPre}"}
-              ${lib.optionalString (execStartPost != "") "ExecStartPost=${execStartPost}"}
-              ${envDeclsGen "Environment="}
-            ''; })
-          ];
-        };
-      in if dependsOn == [] then env else (_dependsOn: env);
-  };
-
+  # FIXME: run execStartPost while execStart is running
   script = writeScript "${name}-now" ''
     #!${stdenv.shell} -e
-    ${envDeclsGen "export "}
+    ${lib.concatStringsSep "\n" (envDeclsGen "export ")}
     ${execStartPre}
     ${execStart}
     ${execStartPost}

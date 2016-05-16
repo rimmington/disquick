@@ -102,6 +102,7 @@ def run(filename, target, system, tempdir, ssh_user=None):
     distribution = writefile(tempdir + "/distribution.nix", mk_distribution(service_names))
     services = writefile(tempdir + "/services.nix", mk_services(filename, remote.infrastructure))
 
+    # FIXME: This goes linear in the number of deployments
     print('[disenv]: Retrieving coordinator profile from remote')
     remote.pull_coordinator_profile()
 
