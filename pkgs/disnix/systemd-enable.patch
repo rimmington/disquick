@@ -11,25 +11,26 @@ index 0b1c3f3..5e63f0f 100644
          elif [ "@job_template@" = "init.d" ]
          then
 diff --git a/dysnomia-modules/util b/dysnomia-modules/util
-index 093858c..4509b60 100644
+index 093858c..735e26c 100644
 --- a/dysnomia-modules/util
 +++ b/dysnomia-modules/util
-@@ -376,10 +376,12 @@ removeSystemdService()
+@@ -376,19 +376,17 @@ removeSystemdService()
  {
      local jobsDir=$(dirname "$1")
      local jobName=$(basename "$1" .service)
 -    
+-    if [ -f $jobsDir/dysnomia.target ]
+-    then
+-        rm $jobsDir/dysnomia.target.wants/$jobName.service
+-        rmdir --ignore-fail-on-non-empty $jobsDir/dysnomia.target.wants
+-    fi
+-    
 +
 +    systemctl disable $jobsDir/$jobName.service
 +
-     if [ -f $jobsDir/dysnomia.target ]
-     then
--        rm $jobsDir/dysnomia.target.wants/$jobName.service
-+        # TODO: is this still necessary?
-         rmdir --ignore-fail-on-non-empty $jobsDir/dysnomia.target.wants
-     fi
+     rm "$1"
      
-@@ -389,6 +391,8 @@ removeSystemdService()
+     if [ -f $2/etc/socket ]
      then
          rm $jobsDir/$jobName.socket
      fi
@@ -38,7 +39,7 @@ index 093858c..4509b60 100644
  }
  
  # Activates a systemd job and configures its wanted dependencies
-@@ -407,13 +411,7 @@ activateSystemdService()
+@@ -407,13 +405,7 @@ activateSystemdService()
      then
          cat $2/etc/systemd-config >> "$1"
      fi
@@ -53,7 +54,7 @@ index 093858c..4509b60 100644
      if [ -f $2/etc/socket ]
      then
          cp $2/etc/socket $jobsDir/$jobName.socket
-@@ -423,5 +421,5 @@ activateSystemdService()
+@@ -423,5 +415,5 @@ activateSystemdService()
      fi
      
      systemctl --system daemon-reload
