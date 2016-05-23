@@ -61,8 +61,8 @@ let
           ${coreutils}/bin/chown ${user.name}:${user.name} ${user.home}''}
         ${if user.allowLogin
           then ''
-            if [ "$(${stdenv.glibc.bin}/bin/getent passwd ${user.name} | ${coreutils}/bin/cut -d: -f7)" =~ /nologin$ ]; then
-              usermod --shell "" ${user.name}
+            if [[ "$(${stdenv.glibc.bin}/bin/getent passwd ${user.name} | ${coreutils}/bin/cut -d: -f7)" =~ /nologin$ ]]; then
+              ${remoteShadow}/bin/usermod --shell "" ${user.name}
             fi
           ''
           else "${remoteShadow}/bin/usermod --shell ${shadow}/bin/nologin ${user.name}"}
