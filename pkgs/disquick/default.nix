@@ -17,9 +17,11 @@ stdenv.mkDerivation rec {
       --replace python3 ${python35}/bin/python3
     chmod a+x $out/bin/*
 
-    cp ./{argparse2man,cached_property}.py $out/libexec/disquick
+    cp ./{argparse2man,cached_property}.py ./manifest.nix $out/libexec/disquick
     substitute ./disquick.py $out/libexec/disquick/disquick.py \
+      --replace libexec $out/libexec \
       --replace "'disnix'" "'${disnix}'" \
+      --replace "'nix-" "'${nix.out}/bin/nix-" \
       --replace "'rsync'" "'${rsync}/bin/rsync'"
     substitute ./dispro.py $out/libexec/disquick/dispro \
       --replace python3 ${python35}/bin/python3

@@ -57,11 +57,6 @@ class Remote():
         system = target.find('system').text
         return cls(hostname, system, tempdir, ssh_user=ssh_user)
 
-    @cached_property
-    def infrastructure_nix(self):
-        content = '''{{ target = {{ hostname = '{}'; system = '{}'; }}; }}'''.format(self.target, self.system)
-        return writefile(self.tempdir + '/infrastructure.nix', content)
-
     def coordinator_profile(self):
         return SyncingCoordinatorProfile(self)
 
@@ -72,26 +67,13 @@ class Deployment():
         self.tempdir = tempdir
         self.build_on_remote = build_on_remote
 
-    @cached_property
-    def service_names(self):
-        expr = 'with import <nixpkgs> {{}}; builtins.toJSON (lib.mapAttrsToList (n: s: s.attrs.name) (import {} {{ inherit pkgs; infrastructure = import {}; }}))'.format(self.filename, self.remote.infrastructure_nix)
-        out = subprocess.check_output(['nix-instantiate', '--show-trace', '--eval', '--expr', expr], universal_newlines=True)
-        in_string = json.loads(out)
-        return json.loads(in_string)
-
-    @cached_property
-    def services_nix(self):
-        content = "{{system, pkgs, distribution, invDistribution}}: pkgs.lib.mapAttrs' (name: s: {{ name = s.attrs.name; value = s.disnix; }}) (import {} {{ inherit pkgs; infrastructure = import {}; }})".format(self.filename, self.remote.infrastructure_nix)
-        return writefile(self.tempdir + '/services.nix', content)
-
-    @cached_property
-    def distribution_nix(self):
-        content = '{{infrastructure}}: {{ {} }}'.format(' '.join(n + ' = builtins.attrValues infrastructure;' for n in self.service_names))
-        return writefile(self.tempdir + '/distribution.nix', content)
+    def _call_manifest(self, attr):
+        expr = 'with import <nixpkgs> {{}}; let serviceSet = import {} {{ inherit pkgs; inherit (props) infrastructure; }}; props = (callPackage libexec/disquick/manifest.nix {{}}) {{ inherit serviceSet; hostname = "{}"; system = "{}"; }}; in props.{}'.format(self.filename, self.remote.target, self.remote.system, attr)
+        return subprocess.check_output(['nix-build', '--no-out-link', '--show-trace', '-E', expr], universal_newlines=True).strip()
 
     def _build_on_remote(self):
         print('[coordinator]: Instantiating store derivations')
-        distributed_derivation = self.remote.run_disnix('disnix-instantiate -s {} -i {} -d {} --no-out-link --show-trace'.format(self.services_nix, self.remote.infrastructure_nix, self.distribution_nix), output=True)
+        distributed_derivation = self._call_manifest('distributedDerivation')
         # distributedDerivation=`disnix-instantiate -s $servicesFile -i $infrastructureFile -d $distributionFile --target-property $targetProperty --interface $interface --no-out-link $showTraceArg`
         print('[coordinator]: Building store derivations')
         self.remote.run_disnix('disnix-build ' + distributed_derivation)
@@ -103,9 +85,8 @@ class Deployment():
             self._build_on_remote()
 
         print('[coordinator]: Building manifest')
-        filename = self.remote.run_disnix('disnix-manifest -s {} -i {} -d {} --no-out-link --show-trace'.format(self.services_nix, self.remote.infrastructure_nix, self.distribution_nix), output=True)
+        return Manifest(self._call_manifest('manifest'), self.remote.run_disnix)
         # manifest=`disnix-manifest -s $servicesFile -i $infrastructureFile -d $distributionFile --target-property $targetProperty --no-out-link --interface $interface $deployStateArg $showTraceArg`
-        return Manifest(filename, self.remote.run_disnix)
 
     def manifest(self):
         return self._manifest
