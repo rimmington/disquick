@@ -5,7 +5,7 @@ import os
 import subprocess
 import sys
 
-sys.path.append('libexec')
+sys.path.append('libexec/disquick')
 
 import argparse2man
 
