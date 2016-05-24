@@ -9,8 +9,8 @@ from cached_property import cached_property
 # TODO: Use logging
 # FIXME: run all in nix-shell OR set PATH in env
 
-def writefile(fn, content, end="\n"):
-    with open(fn, "w") as f:
+def writefile(fn, content, end='\n'):
+    with open(fn, 'w') as f:
         f.write(content)
         if end:
             f.write(end)
@@ -59,8 +59,8 @@ class Remote():
 
     @cached_property
     def infrastructure_nix(self):
-        content = """{{ target = {{ hostname = "{}"; system = "{}"; }}; }}""".format(self.target, self.system)
-        return writefile(self.tempdir + "/infrastructure.nix", content)
+        content = '''{{ target = {{ hostname = '{}'; system = '{}'; }}; }}'''.format(self.target, self.system)
+        return writefile(self.tempdir + '/infrastructure.nix', content)
 
     def coordinator_profile(self):
         return SyncingCoordinatorProfile(self)
@@ -74,20 +74,20 @@ class Deployment():
 
     @cached_property
     def service_names(self):
-        expr = "with import <nixpkgs> {{}}; builtins.toJSON (lib.mapAttrsToList (n: s: s.attrs.name) (import {} {{ inherit pkgs; infrastructure = import {}; }}))".format(self.filename, self.remote.infrastructure_nix)
-        out = subprocess.check_output(["nix-instantiate", "--show-trace", "--eval", "--expr", expr], universal_newlines=True)
+        expr = 'with import <nixpkgs> {{}}; builtins.toJSON (lib.mapAttrsToList (n: s: s.attrs.name) (import {} {{ inherit pkgs; infrastructure = import {}; }}))'.format(self.filename, self.remote.infrastructure_nix)
+        out = subprocess.check_output(['nix-instantiate', '--show-trace', '--eval', '--expr', expr], universal_newlines=True)
         in_string = json.loads(out)
         return json.loads(in_string)
 
     @cached_property
     def services_nix(self):
         content = "{{system, pkgs, distribution, invDistribution}}: pkgs.lib.mapAttrs' (name: s: {{ name = s.attrs.name; value = s.disnix; }}) (import {} {{ inherit pkgs; infrastructure = import {}; }})".format(self.filename, self.remote.infrastructure_nix)
-        return writefile(self.tempdir + "/services.nix", content)
+        return writefile(self.tempdir + '/services.nix', content)
 
     @cached_property
     def distribution_nix(self):
-        content = "{{infrastructure}}: {{ {} }}".format(" ".join(n + " = builtins.attrValues infrastructure;" for n in self.service_names))
-        return writefile(self.tempdir + "/distribution.nix", content)
+        content = '{{infrastructure}}: {{ {} }}'.format(' '.join(n + ' = builtins.attrValues infrastructure;' for n in self.service_names))
+        return writefile(self.tempdir + '/distribution.nix', content)
 
     def _build_on_remote(self):
         print('[coordinator]: Instantiating store derivations')
