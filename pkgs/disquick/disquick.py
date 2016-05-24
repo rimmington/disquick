@@ -18,7 +18,13 @@ def writefile(fn, content, end="\n"):
 
 class DisnixEnvironment():
     def __init__(self, ssh_user=None):
-        self.ssh_user = ssh_user if ssh_user else os.environ.get('SSH_USER', os.environ['USER'])
+        self.ssh_user = ssh_user
+        if not self.ssh_user:
+            self.ssh_user = os.environ.get('SSH_USER')
+        if not self.ssh_user:
+            self.ssh_user = os.environ.get('USER')
+        if not self.ssh_user:
+            raise ValueError('ssh_user not specified and cannot be determined from environment')
 
     @cached_property
     def env(self):
