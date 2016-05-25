@@ -68,7 +68,7 @@ class Deployment():
         self.build_on_remote = build_on_remote
 
     def _call_manifest(self, attr):
-        expr = 'with import <nixpkgs> {{}}; let serviceSet = import {} {{ inherit pkgs; inherit (props) infrastructure; }}; props = (callPackage libexec/disquick/manifest.nix {{}}) {{ inherit serviceSet; hostname = "{}"; system = "{}"; }}; in props.{}'.format(self.filename, self.remote.target, self.remote.system, attr)
+        expr = 'let pkgs = import <nixpkgs> {{}}; system = "{}"; serviceSet = import {} {{ pkgs = import <nixpkgs> {{ inherit system; }}; inherit (props) infrastructure; }}; props = (pkgs.callPackage libexec/disquick/manifest.nix {{}}) {{ inherit serviceSet system; hostname = "{}"; }}; in props.{}'.format(self.remote.system, self.filename, self.remote.target, attr)
         return subprocess.check_output(['nix-build', '--no-out-link', '--show-trace', '-E', expr], universal_newlines=True).strip()
 
     def _build_on_remote(self):
