@@ -19,7 +19,10 @@ def run_manifest(args, tempdir):
 def run_activate(args, tempdir):
     remote = disquick.Remote.from_manifest_file(args.manifest, tempdir, ssh_user=args.ssh_user)
     manifest = disquick.Manifest(args.manifest, remote.run_disnix)
-    manifest.deploy(remote.coordinator_profile())
+    coordinator_profile = remote.coordinator_profile()
+    manifest.deploy(coordinator_profile)
+    if args.gc_root:
+        manifest.create_gc_root(coordinator_profile.current_local())
 
 def main(argv):
     parser = argparse2man.new_parser(__description__)
@@ -36,6 +39,7 @@ def main(argv):
     manifest.set_defaults(func=run_manifest)
 
     activate = subparsers.add_parser('activate', help='Activate a Disnix manifest')
+    activate.add_argument('--gc-root', help='Path to create local GC root symlink', action='store_true')
     activate.add_argument('manifest', help='Disnix manifest file')
     activate.set_defaults(func=run_activate)
 

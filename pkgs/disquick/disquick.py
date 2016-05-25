@@ -127,6 +127,9 @@ class Manifest():
             self._set(coordinator_profile.local_path)
         print('[coordinator]: The system has been successfully deployed!')
 
+    def create_gc_root(self, path):
+        subprocess.check_call(['nix-store', '--max-jobs', '0', '-r', '--add-root', path, '--indirect', self.filename])
+
 class Locks():
     def __init__(self, manifest, run_disnix):
         self.manifest = manifest
@@ -158,6 +161,9 @@ class SyncingCoordinatorProfile():
     @cached_property
     def remote_path(self):
         return '{}@{}:{}'.format(self.remote.ssh_user, self.remote.target, self.TARGET_COORDINATOR_PROFILE_DIR)
+
+    def current_local(self):
+        return self.local_path + '/' + os.readlink(self.local_path + '/default')
 
     def __enter__(self):
         # FIXME: This goes linear in the number of deployments
