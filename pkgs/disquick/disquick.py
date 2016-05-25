@@ -144,6 +144,8 @@ class Locks():
         return False  # Don't suppress any exception
 
 class SyncingCoordinatorProfile():
+    TARGET_COORDINATOR_PROFILE_DIR = '/var/lib/disenv/coordinator-profile'
+
     def __init__(self, remote):
         self.remote = remote
 
@@ -155,7 +157,7 @@ class SyncingCoordinatorProfile():
 
     @cached_property
     def remote_path(self):
-        return '{}@{}:/var/lib/disenv/coordinator-profile'.format(self.remote.ssh_user, self.remote.target)
+        return '{}@{}:{}'.format(self.remote.ssh_user, self.remote.target, self.TARGET_COORDINATOR_PROFILE_DIR)
 
     def __enter__(self):
         # FIXME: This goes linear in the number of deployments
@@ -168,6 +170,7 @@ class SyncingCoordinatorProfile():
         print('[coordinator]: Sending coordinator profile to remote')
         self._rsync(self.local_path, self.remote_path)
         self._sync_coordinator_profile('--to')
+        subprocess.check_call(['ssh', '{}@{}'.format(self.remote.ssh_user, self.remote.target), 'find {}/*-link | while read x; do nix-store --max-jobs 0 -r --add-root $x --indirect $(readlink $x); done'.format(self.TARGET_COORDINATOR_PROFILE_DIR)])
         return False  # Don't suppress any exception
 
     def _rsync(self, here, there):

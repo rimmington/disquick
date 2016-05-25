@@ -1,4 +1,4 @@
-{lib, python35, nix, disnix, stdenv, systemd, rsync, help2man}:
+{lib, python35, nix, disnix, stdenv, systemd, rsync, openssh, help2man}:
 
 stdenv.mkDerivation rec {
   name = "disquick";
@@ -22,7 +22,8 @@ stdenv.mkDerivation rec {
       --replace libexec $out/libexec \
       --replace "'disnix'" "'${disnix}'" \
       --replace "'nix-" "'${nix.out}/bin/nix-" \
-      --replace "'rsync'" "'${rsync}/bin/rsync'"
+      --replace "'rsync'" "'${rsync}/bin/rsync'" \
+      --replace "'ssh'" "'${openssh}/bin/ssh'"
     substitute ./dispro.py $out/libexec/disquick/dispro \
       --replace python3 ${python35}/bin/python3
     chmod a+x $out/libexec/disquick/dispro
