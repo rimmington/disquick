@@ -75,9 +75,11 @@ class Deployment():
         print('[coordinator]: Instantiating store derivations')
         distributed_derivation = self._call_manifest('distributedDerivation')
         # distributedDerivation=`disnix-instantiate -s $servicesFile -i $infrastructureFile -d $distributionFile --target-property $targetProperty --interface $interface --no-out-link $showTraceArg`
-        print('[coordinator]: Building store derivations')
-        self.remote.run_disnix('disnix-build ' + distributed_derivation)
-        # disnix-build $maxConcurrentTransfersArg $distributedDerivation
+        # disnix-build fails when there's no services to build
+        if xml.parse(distributed_derivation).getroot().findall('./build/'):
+            print('[coordinator]: Building store derivations')
+            self.remote.run_disnix('disnix-build ' + distributed_derivation)
+            # disnix-build $maxConcurrentTransfersArg $distributedDerivation
 
     @cached_property
     def _manifest(self):
