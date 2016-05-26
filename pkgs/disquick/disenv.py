@@ -12,11 +12,11 @@ import disquick
 
 __description__ = 'Installs or updates the service environment of a remote system'
 
-def run(filename, target, system, tempdir, ssh_user=None):
+def run(filename, target, system, ssh_user=None):
     filename = os.path.abspath(filename)
 
-    remote = disquick.Remote(target, system, tempdir, ssh_user=ssh_user)
-    deployment = disquick.Deployment(filename, remote, tempdir, build_on_remote=True)
+    remote = disquick.Remote(target, system, ssh_user=ssh_user)
+    deployment = disquick.Deployment(filename, remote, build_on_remote=True)
     deployment.deploy()
 
 def main(argv):
@@ -27,11 +27,9 @@ def main(argv):
     parser.add_argument("-y", "--system", help="Target system (i686-linux, armv7l-linux, ..)", required=True)
     parser.add_argument("--ssh-user", help="User to SSH into")
     parser.add_argument("--tempdir", help="Temporary directory to store generated files")
-    args = parser.parse_args(argv)
 
-    with tempfile.TemporaryDirectory() as d:
-        tempdir = os.path.abspath(args.tempdir or d)
-        run(args.services, args.target, args.system, tempdir, ssh_user=args.ssh_user)
+    args = parser.parse_args(argv)
+    run(args.services, args.target, args.system, ssh_user=args.ssh_user)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

@@ -41,30 +41,28 @@ class DisnixEnvironment():
             return res.stdout.strip()
 
 class Remote():
-    def __init__(self, target, system, tempdir, ssh_user=None):
+    def __init__(self, target, system, ssh_user=None):
         disnix_environment = DisnixEnvironment(ssh_user)
         self.ssh_user = disnix_environment.ssh_user
         self.run_disnix = disnix_environment.run
         self.target = target
         self.system = system
-        self.tempdir = tempdir
 
     @classmethod
-    def from_manifest_file(cls, manifest, tempdir, ssh_user=None):
+    def from_manifest_file(cls, manifest, ssh_user=None):
         root = xml.parse(manifest).getroot()
         target = root.find('./targets/target')
         hostname = target.find('hostname').text
         system = target.find('system').text
-        return cls(hostname, system, tempdir, ssh_user=ssh_user)
+        return cls(hostname, system, ssh_user=ssh_user)
 
     def coordinator_profile(self):
         return SyncingCoordinatorProfile(self)
 
 class Deployment():
-    def __init__(self, filename, remote, tempdir, build_on_remote=True):
+    def __init__(self, filename, remote, build_on_remote=True):
         self.filename = filename
         self.remote = remote
-        self.tempdir = tempdir
         self.build_on_remote = build_on_remote
 
     def _call_manifest(self, attr):

@@ -10,14 +10,14 @@ import disquick
 
 __description__ = 'Low-level service distribution commands'
 
-def run_manifest(args, tempdir):
+def run_manifest(args):
     filename = os.path.abspath(args.services)
-    remote = disquick.Remote(args.target, args.system, tempdir, ssh_user=args.ssh_user)
-    deployment = disquick.Deployment(filename, remote, tempdir, build_on_remote=not args.no_build_on_target)
+    remote = disquick.Remote(args.target, args.system, ssh_user=args.ssh_user)
+    deployment = disquick.Deployment(filename, remote, build_on_remote=not args.no_build_on_target)
     print(deployment.manifest().filename)
 
-def run_activate(args, tempdir):
-    remote = disquick.Remote.from_manifest_file(args.manifest, tempdir, ssh_user=args.ssh_user)
+def run_activate(args):
+    remote = disquick.Remote.from_manifest_file(args.manifest, ssh_user=args.ssh_user)
     manifest = disquick.Manifest(args.manifest, remote.run_disnix)
     coordinator_profile = remote.coordinator_profile()
     manifest.deploy(coordinator_profile)
@@ -27,7 +27,6 @@ def run_activate(args, tempdir):
 def main(argv):
     parser = argparse2man.new_parser(__description__)
     parser.add_argument('--ssh-user', help='User to SSH into')
-    parser.add_argument('--tempdir', help='Temporary directory to store generated files')
     subparsers = parser.add_subparsers(dest='command')
     subparsers.required = True
 
@@ -44,10 +43,7 @@ def main(argv):
     activate.set_defaults(func=run_activate)
 
     args = parser.parse_args(argv)
-
-    with tempfile.TemporaryDirectory() as d:
-        tempdir = os.path.abspath(args.tempdir or d)
-        args.func(args, tempdir)
+    args.func(args)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
