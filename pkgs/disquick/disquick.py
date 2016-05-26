@@ -7,7 +7,6 @@ import xml.etree.ElementTree as xml
 from cached_property import cached_property
 
 # TODO: Use logging
-# FIXME: run all in nix-shell OR set PATH in env
 
 def writefile(fn, content, end='\n'):
     with open(fn, 'w') as f:
@@ -32,11 +31,13 @@ class DisnixEnvironment():
         env['TMPDIR'] = '/tmp'
         env['DISNIX_IMPORT_SUDO'] = 'true'
         env['SSH_USER'] = self.ssh_user
+        # Not using nix-shell because it wants nixpkgs available, which we don't want to require when using 'dispro activate'
+        env['PATH'] = 'PATH_TO(disnix)/bin:PATH_TO(nix)/bin:PATH_TO(openssh)/bin:' + env['PATH']
         return env
 
     def run(self, cmd, output=False, **kwargs):
         stdout = subprocess.PIPE if output else None
-        res = subprocess.run(['nix-shell', '-p', 'disnix', '--run', cmd], env=self.env, stdout=stdout, check=True, universal_newlines=True, **kwargs)
+        res = subprocess.run(cmd, env=self.env, stdout=stdout, check=True, universal_newlines=True, **kwargs)
         if output:
             return res.stdout.strip()
 
@@ -67,7 +68,7 @@ class Deployment():
 
     def _call_manifest(self, attr):
         expr = 'let pkgs = import <nixpkgs> {{}}; system = "{}"; serviceSet = import {} {{ pkgs = import <nixpkgs> {{ inherit system; }}; inherit (props) infrastructure; }}; props = (pkgs.callPackage libexec/disquick/manifest.nix {{}}) {{ inherit serviceSet system; hostname = "{}"; }}; in props.{}'.format(self.remote.system, self.filename, self.remote.target, attr)
-        return subprocess.check_output(['nix-build', '--no-out-link', '--show-trace', '-E', expr], universal_newlines=True).strip()
+        return subprocess.check_output(['PATH_TO(nix)/bin/nix-build', '--no-out-link', '--show-trace', '-E', expr], universal_newlines=True).strip()
 
     def _build_on_remote(self):
         print('[coordinator]: Instantiating store derivations')
@@ -76,7 +77,7 @@ class Deployment():
         # disnix-build fails when there's no services to build
         if xml.parse(distributed_derivation).getroot().findall('./build/'):
             print('[coordinator]: Building store derivations')
-            self.remote.run_disnix('disnix-build ' + distributed_derivation)
+            self.remote.run_disnix(['disnix-build', distributed_derivation])
             # disnix-build $maxConcurrentTransfersArg $distributedDerivation
 
     @cached_property
@@ -106,17 +107,17 @@ class Manifest():
 
     def _distribute(self):
         print('[coordinator]: Distributing intra-dependency closures')
-        self.run_disnix('disnix-distribute ' + self.filename)
+        self.run_disnix(['disnix-distribute', self.filename])
         # disnix-distribute $maxConcurrentTransfersArg $manifest
 
     def _activate(self, coordinator_profile):
         print('[coordinator]: Activating new configuration')
-        self.run_disnix('disnix-activate --coordinator-profile-path {} {}'.format(coordinator_profile, self.filename))
+        self.run_disnix(['disnix-activate', '--coordinator-profile-path', coordinator_profile, self.filename])
         # disnix-activate $profileArg $coordinatorProfilePathArg $noUpgradeArg $manifest || (releaseLocks; displayFailure; exit 1)
 
     def _set(self, coordinator_profile):
         print('[coordinator]: Setting profiles')
-        self.run_disnix('disnix-set --coordinator-profile-path {} {}'.format(coordinator_profile, self.filename))
+        self.run_disnix(['disnix-set', '--coordinator-profile-path', coordinator_profile, self.filename])
         # disnix-set $profileArg $coordinatorProfilePathArg $noCoordinatorProfileArg $noTargetProfilesArg $manifest || (releaseLocks; displayFailure; exit 1)
 
     def deploy(self, coordinator_profile):
@@ -128,7 +129,7 @@ class Manifest():
         print('[coordinator]: The system has been successfully deployed!')
 
     def create_gc_root(self, path):
-        subprocess.check_call(['nix-store', '--max-jobs', '0', '-r', '--add-root', path, '--indirect', self.filename])
+        subprocess.check_call(['PATH_TO(nix)/bin/nix-store', '--max-jobs', '0', '-r', '--add-root', path, '--indirect', self.filename])
 
 class Locks():
     def __init__(self, manifest, run_disnix):
@@ -137,12 +138,12 @@ class Locks():
 
     def __enter__(self):
         print('[coordinator]: Acquiring locks')
-        self.run_disnix('disnix-lock ' + self.manifest)
+        self.run_disnix(['disnix-lock', self.manifest])
         # disnix-lock $profileArg $manifest || (displayFailure; exit 1)
 
     def __exit__(self, *exc_details):
         print('[coordinator]: Releasing locks')
-        self.run_disnix('disnix-lock --unlock ' + self.manifest)
+        self.run_disnix(['disnix-lock', '--unlock', self.manifest])
         # disnix-lock --unlock $profileArg $manifest
         return False  # Don't suppress any exception
 
@@ -182,14 +183,13 @@ class SyncingCoordinatorProfile():
         print('[coordinator]: Sending coordinator profile to remote')
         self._rsync(self.local_path, self.remote_path)
         self._sync_coordinator_profile('--to')
-        subprocess.check_call(['ssh', '{}@{}'.format(self.remote.ssh_user, self.remote.target), 'find {}/*-link | while read x; do nix-store --max-jobs 0 -r --add-root $x --indirect $(readlink $x); done'.format(self.TARGET_COORDINATOR_PROFILE_DIR)])
+        subprocess.check_call(['PATH_TO(openssh)/bin/ssh', '{}@{}'.format(self.remote.ssh_user, self.remote.target), 'find {}/*-link | while read x; do nix-store --max-jobs 0 -r --add-root $x --indirect $(readlink $x); done'.format(self.TARGET_COORDINATOR_PROFILE_DIR)])
         return False  # Don't suppress any exception
 
     def _rsync(self, here, there):
-        subprocess.check_call(['rsync', '-rl', here + '/', there])
+        subprocess.check_call(['PATH_TO(rsync)/bin/rsync', '-rl', here + '/', there])
 
     def _sync_coordinator_profile(self, dir_flag):
         for name in filter(lambda n: n != 'default', os.listdir(self.local_path)):
             nix_store_path = os.readlink(self.local_path + '/' + name)
-            cmd = 'disnix-copy-closure {} -t {} {}'.format(dir_flag, self.remote.target, nix_store_path)
-            self.remote.run_disnix(cmd)
+            self.remote.run_disnix(['disnix-copy-closure', dir_flag, '-t', self.remote.target, nix_store_path])

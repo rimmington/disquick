@@ -20,10 +20,11 @@ stdenv.mkDerivation rec {
     cp ./{argparse2man,cached_property}.py ./manifest.nix $out/libexec/disquick
     substitute ./disquick.py $out/libexec/disquick/disquick.py \
       --replace libexec $out/libexec \
-      --replace "'disnix'" "'${disnix}'" \
-      --replace "'nix-" "'${nix.out}/bin/nix-" \
-      --replace "'rsync'" "'${rsync}/bin/rsync'" \
-      --replace "'ssh'" "'${openssh}/bin/ssh'"
+      --replace 'PATH_TO(disnix)' ${disnix} \
+      --replace 'PATH_TO(nix)' ${nix.out} \
+      --replace 'PATH_TO(openssh)' ${openssh} \
+      --replace 'PATH_TO(rsync)' ${rsync} \
+      --replace 'PATH_TO(openssh)' ${openssh}
     substitute ./dispro.py $out/libexec/disquick/dispro \
       --replace python3 ${python35}/bin/python3
     chmod a+x $out/libexec/disquick/dispro
