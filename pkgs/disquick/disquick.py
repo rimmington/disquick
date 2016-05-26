@@ -62,6 +62,7 @@ class Remote():
         return SyncingCoordinatorProfile(self)
 
     def run_gc(self):
+        print('[target: {}]: Running garbage collection'.format(self.target))
         with tempfile.TemporaryDirectory() as d:
             infrastructure = writefile(d + '/infrastructure.nix', '{{ target = {{ hostname = "{}"; system = "{}"; }}; }}'.format(self.target, self.system))
             self.run_disnix(['disnix-collect-garbage', '-d', infrastructure])
@@ -98,10 +99,12 @@ class Deployment():
     def manifest(self):
         return self._manifest
 
-    def deploy(self):
+    def deploy(self, keep_only=None):
         manifest = self.manifest()
         with self.remote.coordinator_profile() as p:
             manifest.deploy(p)
+            if keep_only:
+                p.delete_generations(keep_only, sync=False)  # Will sync in __exit__
 
 class Manifest():
     def __init__(self, filename, run_disnix):
@@ -201,7 +204,6 @@ class SyncingCoordinatorProfile():
         subprocess.check_call(['PATH_TO(openssh)/bin/ssh', '{}@{}'.format(self.remote.ssh_user, self.remote.target), 'find {}/*-link | while read x; do nix-store --max-jobs 0 -r --add-root $x --indirect $(readlink $x); done'.format(self.TARGET_COORDINATOR_PROFILE_DIR)])
 
     def __enter__(self):
-        # FIXME: This goes linear in the number of deployments
         print('[coordinator]: Retrieving coordinator profile from remote')
         self._rsync(self.remote_path, self.local_path)
         self._sync_coordinator_profile('--from')
