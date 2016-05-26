@@ -162,8 +162,14 @@ class SyncingCoordinatorProfile():
     def remote_path(self):
         return '{}@{}:{}'.format(self.remote.ssh_user, self.remote.target, self.TARGET_COORDINATOR_PROFILE_DIR)
 
-    def current_local(self):
-        return self.local_path + '/' + os.readlink(self.local_path + '/default')
+    def current_local(self, must_exist=True):
+        default = self.local_path + '/default'
+        if os.path.exists(default):
+            return self.local_path + '/' + os.readlink(default)
+        elif must_exist:
+            raise FileNotFoundError(default)
+        else:
+            return None
 
     def __enter__(self):
         # FIXME: This goes linear in the number of deployments
