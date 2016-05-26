@@ -2,6 +2,7 @@ import json
 import os
 import os.path
 import subprocess
+import tempfile
 import xml.etree.ElementTree as xml
 
 from cached_property import cached_property
@@ -59,6 +60,11 @@ class Remote():
 
     def coordinator_profile(self):
         return SyncingCoordinatorProfile(self)
+
+    def run_gc(self):
+        with tempfile.TemporaryDirectory() as d:
+            infrastructure = writefile(d + '/infrastructure.nix', '{{ target = {{ hostname = "{}"; system = "{}"; }}; }}'.format(self.target, self.system))
+            self.run_disnix(['disnix-collect-garbage', '-d', infrastructure])
 
 class Deployment():
     def __init__(self, filename, remote, build_on_remote=True):
@@ -172,6 +178,28 @@ class SyncingCoordinatorProfile():
         else:
             return None
 
+    def delete_generations(self, keep_count, sync=True):
+        current = self.current_local()
+        current_num = int(os.path.basename(current).split('-')[1])
+        keep = ['default-{}-link'.format(n) for n in range(current_num, 0, -1)[:keep_count]] + ['default']
+        old = sorted(f for f in os.listdir(self.local_path) if f not in keep)
+        if old:
+            print('[coordinator]: Deleting generations ' + ' '.join(old))
+        else:
+            print('[coordinator]: No generations will be deleted')
+
+        for fn in old:
+            os.unlink(self.local_path + '/' + fn)
+
+        if sync:
+            self._push_profile()
+
+    def _push_profile(self):
+        print('[coordinator]: Sending coordinator profile to remote')
+        self._rsync(self.local_path, self.remote_path)
+        self._sync_coordinator_profile('--to')
+        subprocess.check_call(['PATH_TO(openssh)/bin/ssh', '{}@{}'.format(self.remote.ssh_user, self.remote.target), 'find {}/*-link | while read x; do nix-store --max-jobs 0 -r --add-root $x --indirect $(readlink $x); done'.format(self.TARGET_COORDINATOR_PROFILE_DIR)])
+
     def __enter__(self):
         # FIXME: This goes linear in the number of deployments
         print('[coordinator]: Retrieving coordinator profile from remote')
@@ -180,14 +208,11 @@ class SyncingCoordinatorProfile():
         return self
 
     def __exit__(self, *exc_details):
-        print('[coordinator]: Sending coordinator profile to remote')
-        self._rsync(self.local_path, self.remote_path)
-        self._sync_coordinator_profile('--to')
-        subprocess.check_call(['PATH_TO(openssh)/bin/ssh', '{}@{}'.format(self.remote.ssh_user, self.remote.target), 'find {}/*-link | while read x; do nix-store --max-jobs 0 -r --add-root $x --indirect $(readlink $x); done'.format(self.TARGET_COORDINATOR_PROFILE_DIR)])
+        self._push_profile()
         return False  # Don't suppress any exception
 
     def _rsync(self, here, there):
-        subprocess.check_call(['PATH_TO(rsync)/bin/rsync', '-rl', here + '/', there])
+        subprocess.check_call(['PATH_TO(rsync)/bin/rsync', '-rl', '--delete-after', here + '/', there])
 
     def _sync_coordinator_profile(self, dir_flag):
         for name in filter(lambda n: n != 'default', os.listdir(self.local_path)):

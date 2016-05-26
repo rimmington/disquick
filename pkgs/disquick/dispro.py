@@ -24,6 +24,12 @@ def run_activate(args):
     if args.gc_root:
         manifest.create_gc_root(coordinator_profile.current_local())
 
+def run_gc(args):
+    remote = disquick.Remote(args.target, '', ssh_user=args.ssh_user)
+    if args.keep_only:
+        remote.coordinator_profile().delete_generations(args.keep_only, sync=True)
+    remote.run_gc()
+
 def main(argv):
     parser = argparse2man.new_parser(__description__)
     parser.add_argument('--ssh-user', help='User to SSH into')
@@ -41,6 +47,11 @@ def main(argv):
     activate.add_argument('--gc-root', help='Path to create local GC root symlink', action='store_true')
     activate.add_argument('manifest', help='Disnix manifest file')
     activate.set_defaults(func=run_activate)
+
+    gc = subparsers.add_parser('gc', help='Run GC on target')
+    gc.add_argument('--keep-only', help='Number of generations to keep', type=int)
+    gc.add_argument('target', help='Target hostname')
+    gc.set_defaults(func=run_gc)
 
     args = parser.parse_args(argv)
     args.func(args)
