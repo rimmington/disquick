@@ -1,3 +1,4 @@
+import abc
 import json
 import os
 import os.path
@@ -59,13 +60,17 @@ class Remote():
         return cls(hostname, system, ssh_user=ssh_user)
 
     def coordinator_profile(self):
-        return SyncingCoordinatorProfile(self)
+        if self.target == 'localhost':
+            return LocalhostCoordinatorProfile()
+        else:
+            return SyncingCoordinatorProfile(self)
 
     def run_gc(self):
         print('[target: {}]: Running garbage collection'.format(self.target))
+        interface = 'disnix-client' if self.target == 'localhost' else 'disnix-ssh-client'
         with tempfile.TemporaryDirectory() as d:
             infrastructure = writefile(d + '/infrastructure.nix', '{{ target = {{ hostname = "{}"; system = "{}"; }}; }}'.format(self.target, self.system))
-            self.run_disnix(['disnix-collect-garbage', '-d', infrastructure])
+            self.run_disnix(['disnix-collect-garbage', '--interface', interface, '-d', infrastructure])
 
 class Deployment():
     def __init__(self, filename, remote, build_on_remote=True):
@@ -104,7 +109,7 @@ class Deployment():
         with self.remote.coordinator_profile() as p:
             manifest.deploy(p)
             if keep_only:
-                p.delete_generations(keep_only, sync=False)  # Will sync in __exit__
+                p.delete_generations(keep_only)
 
 class Manifest():
     def __init__(self, filename, run_disnix):
@@ -156,21 +161,18 @@ class Locks():
         # disnix-lock --unlock $profileArg $manifest
         return False  # Don't suppress any exception
 
-class SyncingCoordinatorProfile():
+class CoordinatorProfile(metaclass=abc.ABCMeta):
     TARGET_COORDINATOR_PROFILE_DIR = '/var/lib/disenv/coordinator-profile'
 
-    def __init__(self, remote):
-        self.remote = remote
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_details):
+        return False
 
     @cached_property
-    def local_path(self):
-        d = os.path.expanduser('~/.local/share/disenv/') + self.remote.target
-        os.makedirs(d, exist_ok=True, mode=0o700)
-        return d
-
-    @cached_property
-    def remote_path(self):
-        return '{}@{}:{}'.format(self.remote.ssh_user, self.remote.target, self.TARGET_COORDINATOR_PROFILE_DIR)
+    @abc.abstractmethod
+    def local_path(self): pass
 
     def current_local(self, must_exist=True):
         default = self.local_path + '/default'
@@ -181,7 +183,7 @@ class SyncingCoordinatorProfile():
         else:
             return None
 
-    def delete_generations(self, keep_count, sync=True):
+    def delete_generations(self, keep_count):
         current = self.current_local()
         current_num = int(os.path.basename(current).split('-')[1])
         keep = ['default-{}-link'.format(n) for n in range(current_num, 0, -1)[:keep_count]] + ['default']
@@ -194,18 +196,34 @@ class SyncingCoordinatorProfile():
         for fn in old:
             os.unlink(self.local_path + '/' + fn)
 
-        if sync:
-            self._push_profile()
+class LocalhostCoordinatorProfile(CoordinatorProfile):
+    @cached_property
+    def local_path(self):
+        return CoordinatorProfile.TARGET_COORDINATOR_PROFILE_DIR
+
+class SyncingCoordinatorProfile(CoordinatorProfile):
+    def __init__(self, remote):
+        self.remote = remote
+
+    @cached_property
+    def local_path(self):
+        d = os.path.expanduser('~/.local/share/disenv/') + self.remote.target
+        os.makedirs(d, exist_ok=True, mode=0o700)
+        return d
+
+    @cached_property
+    def _remote_path(self):
+        return '{}@{}:{}'.format(self.remote.ssh_user, self.remote.target, CoordinatorProfile.TARGET_COORDINATOR_PROFILE_DIR)
 
     def _push_profile(self):
         print('[coordinator]: Sending coordinator profile to remote')
-        self._rsync(self.local_path, self.remote_path)
+        self._rsync(self.local_path, self._remote_path)
         self._sync_coordinator_profile('--to')
-        subprocess.check_call(['PATH_TO(openssh)/bin/ssh', '{}@{}'.format(self.remote.ssh_user, self.remote.target), 'find {}/*-link | while read x; do nix-store --max-jobs 0 -r --add-root $x --indirect $(readlink $x); done'.format(self.TARGET_COORDINATOR_PROFILE_DIR)])
+        subprocess.check_call(['PATH_TO(openssh)/bin/ssh', '{}@{}'.format(self.remote.ssh_user, self.remote.target), 'find {}/*-link | while read x; do nix-store --max-jobs 0 -r --add-root $x --indirect $(readlink $x); done'.format(CoordinatorProfile.TARGET_COORDINATOR_PROFILE_DIR)])
 
     def __enter__(self):
         print('[coordinator]: Retrieving coordinator profile from remote')
-        self._rsync(self.remote_path, self.local_path)
+        self._rsync(self._remote_path, self.local_path)
         self._sync_coordinator_profile('--from')
         return self
 

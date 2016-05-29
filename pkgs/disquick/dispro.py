@@ -27,7 +27,8 @@ def run_activate(args):
 def run_gc(args):
     remote = disquick.Remote(args.target, '', ssh_user=args.ssh_user)
     if args.keep_only:
-        remote.coordinator_profile().delete_generations(args.keep_only, sync=True)
+        with remote.coordinator_profile() as p:
+            p.delete_generations(args.keep_only)
     remote.run_gc()
 
 def main(argv):
@@ -44,7 +45,7 @@ def main(argv):
     manifest.set_defaults(func=run_manifest)
 
     activate = subparsers.add_parser('activate', help='Activate a Disnix manifest')
-    activate.add_argument('--gc-root', help='Path to create local GC root symlink', action='store_true')
+    activate.add_argument('--gc-root', help='Create local GC root symlink', action='store_true')
     activate.add_argument('manifest', help='Disnix manifest file')
     activate.set_defaults(func=run_activate)
 

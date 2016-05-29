@@ -13,7 +13,7 @@ let
   servicesFun = {system, pkgs, distribution, invDistribution}: pkgs.lib.mapAttrs' (name: s: { name = s.attrs.name; value = s.disnix; }) serviceSet;
   distributionFun = {infrastructure}: lib.mapAttrs' (name: s: { name = s.attrs.name; value = builtins.attrValues infrastructure; }) serviceSet;
   targetProperty = "hostname";
-  clientInterface = "disnix-ssh-client";
+  clientInterface = if hostname == "localhost" then "disnix-client" else "disnix-ssh-client";
 in {
   inherit infrastructure;
   manifest = viaXSLT "manifest.xml" "${disnix}/share/disnix/generatemanifest.xsl" (disnixLib.generateManifest pkgs servicesFun infrastructure distributionFun targetProperty clientInterface false);

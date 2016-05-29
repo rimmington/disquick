@@ -26,6 +26,10 @@ class cached_property(object):
         value = obj.__dict__[self.func.__name__] = self.func(obj)
         return value
 
+    @property
+    def __isabstractmethod__(self):
+        return getattr(self.func, '__isabstractmethod___', False)
+
 
 class threaded_cached_property(object):
     """
