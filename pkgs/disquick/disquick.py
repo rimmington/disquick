@@ -174,7 +174,7 @@ class CoordinatorProfile(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def local_path(self): pass
 
-    def current_local(self, must_exist=True):
+    def current_local_generation_link(self, must_exist=True):
         default = self.local_path + '/default'
         if os.path.exists(default):
             return self.local_path + '/' + os.readlink(default)
@@ -184,7 +184,7 @@ class CoordinatorProfile(metaclass=abc.ABCMeta):
             return None
 
     def delete_generations(self, keep_count):
-        current = self.current_local()
+        current = self.current_local_generation_link()
         current_num = int(os.path.basename(current).split('-')[1])
         keep = ['default-{}-link'.format(n) for n in range(current_num, 0, -1)[:keep_count]] + ['default']
         old = sorted(f for f in os.listdir(self.local_path) if f not in keep)

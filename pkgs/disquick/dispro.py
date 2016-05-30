@@ -22,7 +22,7 @@ def run_activate(args):
     coordinator_profile = remote.coordinator_profile()
     manifest.deploy(coordinator_profile)
     if args.gc_root:
-        manifest.create_gc_root(coordinator_profile.current_local())
+        manifest.create_gc_root(coordinator_profile.current_local_generation_link())
 
 def run_gc(args):
     remote = disquick.Remote(args.target, '', ssh_user=args.ssh_user)
