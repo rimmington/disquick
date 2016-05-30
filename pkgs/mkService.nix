@@ -10,6 +10,7 @@
 , dependsOn ? []
 , environment ? {}
 , path ? []
+, killMode ? "control-group"
 }@attrs:
 
 # TODO: Some way to ensure dependencies are definitely included, eg. the Disnix way
@@ -30,6 +31,7 @@ assert ! (environment ? PATH);  # Use path over environment.PATH
 assert user == {} || (user.name or "root") != "root";  # Can't specify options for root
 assert (! user.createHome or false) || (user.home or null) != null;  # Must specify home with createHome
 assert (user.create or true) == true || (attrs.user == { create = false; name = user.name; });  # If create is false, other properties will not be applied
+assert killMode == "control-group" || killMode == "process";  # Strings are the best, no question
 
 let
   chpst = lib.overrideDerivation runit (o: {
@@ -55,6 +57,7 @@ let
       wantedBy = if startWithBoot then [ "multi-user.target" ] else [];
       serviceConfig = {
         ExecStart = execStart;
+        KillMode = killMode;
       } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
         // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; };
       wants = depNames;
@@ -127,7 +130,8 @@ in {
             service = section "Service" (
               (envDeclsGen "Environment=") ++
               (lib.optional (execStartPre != "") "ExecStartPre=${execStartPre}") ++
-              (lib.optional (execStartPost != "") "ExecStartPost=${execStartPost}"));
+              (lib.optional (execStartPost != "") "ExecStartPost=${execStartPost}") ++
+              ["KillMode=${killMode}"]);
           in "\n" + lib.concatStringsSep "\n" (unit ++ install ++ service); })
       ];
     };
