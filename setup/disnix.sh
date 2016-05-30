@@ -13,7 +13,7 @@ disnixOut=$(nix-env -qa --out-path --no-name -f $cloneDir -A disnixDebian)
 groupadd disnix
 usermod -aG disnix $user
 
-mkdir -m 770 -p /var/lib/disenv/coordinator-profile
+mkdir -m 2770 -p /var/lib/disenv/coordinator-profile
 chown root:disnix /var/lib/disenv/coordinator-profile
 
 cat <<"EOF" > /etc/systemd/system/dysnomia.target
