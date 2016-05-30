@@ -1,4 +1,4 @@
-{writeScript, buildEnv, writeTextFile, lib, stdenv, busybox, remoteShadow, shadow, coreutils, findutils, gnugrep, gnused, systemd}:
+{writeScript, buildEnv, writeTextFile, lib, stdenv, runit, remoteShadow, shadow, coreutils, findutils, gnugrep, gnused, systemd}:
 
 { name
 , script
@@ -32,8 +32,21 @@ assert (! user.createHome or false) || (user.home or null) != null;  # Must spec
 assert (user.create or true) == true || (attrs.user == { create = false; name = user.name; });  # If create is false, other properties will not be applied
 
 let
+  chpst = lib.overrideDerivation runit (o: {
+    name = "runit-${o.version}-chpst";
+    # https://github.com/NixOS/nixpkgs/blob/7a37ac15b3fdca4dfa5c16fcc2a4de1294f5dc87/pkgs/tools/system/runit/default.nix
+    phases = [ "unpackPhase" "patchPhase" "buildPhase" "checkPhase" "installPhase" "fixupPhase" ];
+    postPatch = ''
+      cd ${o.name}
+      sed -i 's,-static,,g' src/Makefile
+    '';
+    buildPhase = ''
+      make -C 'src'
+    '';
+    installPhase = "mv src/chpst $out";
+  });
   user =
-    let a = { name = "root"; home = null; allowLogin = false; } // (attrs.user or {});
+    let a = { name = "root"; groups = []; home = null; allowLogin = false; } // (attrs.user or {});
     in { create = a.name != "root"; createHome = a.home != null; } // a;
   service =
     let depNames = map (s: s.attrs.name + ".service") dependsOn;
@@ -71,7 +84,12 @@ let
       ''}
       ${preStartRootScript}''
     else "";
-  runAsUser = exec: if user.name == "root" then exec else "${busybox}/bin/busybox chpst -u ${user.name} ${exec}";
+  runAsUser = exec:
+    if user.name == "root"
+      then exec
+      else
+        let suf = lib.optionalString (user.groups != []) ":${lib.concatStringsSep ":" user.groups}";
+        in "${chpst} -u ${user.name}${suf} ${exec}";
   execStart =
     let
       userScript = writeScript "${name}-start" ''
