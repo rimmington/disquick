@@ -49,9 +49,14 @@ disenv -s services.nix --ssh-user pi -t raspberrypi2.local -y armv7l-linux
 .fi
 
 [CAVEATS]
-SSH_USER needs passwordless
+.B SSH_USER
+is ignored when deploying to localhost, and the current user must have Disnix D-Bus send permissions (typically by being in the
+.B disnix
+group).
+.PP
+When deploying to remote machines, SSH_USER needs passwordless
 .B sudo nix-store
-access.
+access as well as Disnix D-Bus send permissions.
 
 [COPYRIGHT]
 Copyright \(co 2016 Deakin Software and Technology Innovation Lab.
