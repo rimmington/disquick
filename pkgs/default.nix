@@ -8,4 +8,6 @@ pkgs.overridePackages (self: super: {
   disquick = self.callPackage ./disquick {};
   disquickProps = self.callPackage ./disquick/manifest.nix {};
   remoteShadow = self.callPackage ./remoteShadow.nix {};
+  mdocml = self.callPackage ./mdocml.nix {};
+  cli2man = self.callPackage ./cli2man.nix {};
 })

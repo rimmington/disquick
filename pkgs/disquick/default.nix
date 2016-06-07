@@ -1,19 +1,16 @@
-{lib, python35, nix, disnix, stdenv, systemd, rsync, openssh, help2man}:
+{lib, python35, nix, disnix, stdenv, systemd, rsync, openssh, help2man, cli2man, mdocml, callPackage}:
 
-stdenv.mkDerivation rec {
+let
+  disctl = callPackage ./disctl {};
+in stdenv.mkDerivation rec {
   name = "disquick";
   version = "1.0";
   src = ./.;
-  buildInputs = [ python35 help2man ];
+  buildInputs = [ python35 help2man cli2man mdocml ];
   installPhase = ''
     mkdir -p $out/bin $out/share/man/man1 $out/libexec/disquick
     substitute ./disenv.py $out/bin/disenv \
       --replace libexec $out/libexec \
-      --replace python3 ${python35}/bin/python3
-    substitute ./disctl.py $out/bin/disctl \
-      --replace libexec $out/libexec \
-      --replace systemctl ${systemd}/bin/systemctl \
-      --replace journalctl ${systemd}/bin/journalctl \
       --replace python3 ${python35}/bin/python3
     chmod a+x $out/bin/*
 
@@ -29,9 +26,11 @@ stdenv.mkDerivation rec {
       --replace python3 ${python35}/bin/python3
     chmod a+x $out/libexec/disquick/dispro
 
-    export ARGPARSE2MAN_MAN=1
+    ln -s ${disctl}/bin/disctl $out/bin/disctl
+
+    export MAN=1
+    cli2man $out/bin/disctl --os 'disquick ${version}' -I disctl.mdoc | mandoc -Tman > $out/share/man/man1/disctl.1
     help2man -S 'disquick ${version}' --name "$(ARGPARSE2MAN_DESC=1 $out/bin/disenv)" -i disenv.1.h2m $out/bin/disenv > $out/share/man/man1/disenv.1
-    help2man -S 'disquick ${version}' --name "$(ARGPARSE2MAN_DESC=1 $out/bin/disctl)" -i disctl.1.h2m $out/bin/disctl > $out/share/man/man1/disctl.1
   '';
 
   meta = {

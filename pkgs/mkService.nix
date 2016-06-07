@@ -113,6 +113,7 @@ in {
   serviceAttr = builtins.listToAttrs [ { inherit name; value = service; } ];
 
   disnix =
+    # TODO: Avoid making three separate derivations here
     let _pkg = buildEnv {
       name = "service-${name}";
       paths = [

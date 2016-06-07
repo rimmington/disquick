@@ -35,7 +35,7 @@ def new_parser(description=None, version='1.0'):
         print(description)
         sys.exit(0)
 
-    for_man = bool(os.environ.get('ARGPARSE2MAN_MAN'))
+    for_man = bool(os.environ.get('MAN'))
     formatter_class = Help2ManFormatter if for_man else argparse.HelpFormatter
     epilog = None if for_man else 'See the man page for more details.'
     description = None if for_man else description
