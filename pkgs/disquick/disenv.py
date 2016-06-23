@@ -12,11 +12,11 @@ import disquick
 
 __description__ = 'Installs or updates the service environment of a remote system'
 
-def run(filename, target, system, ssh_user=None, keep_only=None):
+def run(filename, target, system, ssh_user=None, keep_only=None, build_on_remote=True):
     filename = os.path.abspath(filename)
 
     remote = disquick.Remote(target, system, ssh_user=ssh_user)
-    deployment = disquick.Deployment(filename, remote, build_on_remote=True)
+    deployment = disquick.Deployment(filename, remote, build_on_remote=build_on_remote)
     deployment.deploy(keep_only=keep_only)
 
 def main(argv):
@@ -27,9 +27,12 @@ def main(argv):
     parser.add_argument("-y", "--system", help="Target system (x86_64-linux, armv7l-linux, ..)", required=True)
     parser.add_argument("--ssh-user", help="User to SSH into")
     parser.add_argument("--keep-only", help="Number of generations to keep (default 5, 0 to keep all)", type=int, default=5)
+    parser.add_argument('--no-build-on-target', help='Do not build any derivations on target', action='store_true')
 
     args = parser.parse_args(argv)
-    run(args.services, args.target, args.system, ssh_user=args.ssh_user, keep_only=args.keep_only if args.keep_only else None)
+    run(args.services, args.target, args.system, ssh_user=args.ssh_user
+        , keep_only=args.keep_only if args.keep_only else None
+        , build_on_remote=not args.no_build_on_target)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
