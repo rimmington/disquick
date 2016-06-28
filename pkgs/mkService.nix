@@ -14,7 +14,6 @@
 }@attrs:
 
 # TODO: Some way to ensure dependencies are definitely included, eg. the Disnix way
-# TODO: Validate no conflicting user attributes, eg. different homes
 # TODO: Networking
 # TODO: RequiresMountsFor
 # TODO: Good security defaults, see systemd.service(5) and links
