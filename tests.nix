@@ -27,9 +27,20 @@ let
     user.name = "alice";
     script = "true";
   };
+  s5 = mkService {
+    name = "s5";
+    dependsOn = [ s1 ];
+    script = "true";
+  };
+  s6 = mkService {
+    name = "s6";
+    dependsOn = [ s5 ];
+    script = "true";
+  };
 in
   assert (builtins.tryEval (checkServices { inherit s1; })).success == true;
   assert (builtins.tryEval (checkServices { inherit s1 s2; })).success == false;
   assert (builtins.tryEval (checkServices { inherit s1 s3; })).success == true;
   assert (builtins.tryEval (checkServices { inherit s3 s4; })).success == true;
-  true
+  assert (builtins.tryEval (checkServices { inherit s6 s5; })).success == false;
+  {}

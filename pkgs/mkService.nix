@@ -13,7 +13,6 @@
 , killMode ? "control-group"
 }@attrs:
 
-# TODO: Some way to ensure dependencies are definitely included, eg. the Disnix way
 # TODO: Networking
 # TODO: RequiresMountsFor
 # TODO: Good security defaults, see systemd.service(5) and links
