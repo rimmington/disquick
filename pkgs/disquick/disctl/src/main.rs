@@ -56,6 +56,17 @@ trait CommandOut : Sized {
     fn run(&mut Command) -> Result<Self>;
 }
 
+impl CommandOut for () {
+    fn run(cmd: &mut Command) -> Result<Self> {
+        let exit = try!(cmd.spawn().and_then(|mut c| c.wait()));
+        if exit.success() {
+            Ok(())
+        } else {
+            Err(NonZero(exit.code()))
+        }
+    }
+}
+
 struct Suppress;
 
 impl CommandOut for Suppress {
@@ -70,18 +81,13 @@ impl CommandOut for Suppress {
     }
 }
 
-impl CommandOut for () {
-    fn run(cmd: &mut Command) -> Result<Self> {
-        let exit = try!(cmd.spawn().and_then(|mut c| c.wait()));
-        if exit.success() {
-            Ok(())
-        } else {
-            Err(NonZero(exit.code()))
-        }
-    }
+#[derive(Debug)]
+struct AnyStdout {
+    stdout: String,
+    status: std::process::ExitStatus
 }
 
-impl CommandOut for String {
+impl CommandOut for AnyStdout {
     fn run(cmd: &mut Command) -> Result<Self> {
         use std::process::Stdio;
         use std::io::Read;
@@ -90,10 +96,17 @@ impl CommandOut for String {
         let rdres = child.stdout.as_mut().unwrap().read_to_string(&mut buffer);
         let wtres = child.wait();
         let exit = try!(rdres.and(wtres).map_err(IoError));
-        if exit.success() {
-            Ok(buffer)
+        Ok(AnyStdout { stdout: buffer, status: exit })
+    }
+}
+
+impl CommandOut for String {
+    fn run(cmd: &mut Command) -> Result<Self> {
+        let any : AnyStdout = try!(run(cmd));
+        if any.status.success() {
+            Ok(any.stdout)
         } else {
-            Err(NonZero(exit.code()))
+            Err(NonZero(any.status.code()))
         }
     }
 }
@@ -165,12 +178,12 @@ fn clear_failed(args: &Args) -> Result<bool> {
 fn status(name: Option<&String>) -> Result<()> {
     try!(run_with_service_optional(name, Command::new("systemctl").arg("status")));
     if let None = name {
-        let stdout : String = try!(run(Command::new("systemctl").arg("is-system-running")));
-        if stdout.trim() == "degraded" {
-            println!("Some units have \x1b[38;5;196mfailed\x1b[0m:");
+        let any : AnyStdout = try!(run(Command::new("systemctl").arg("is-system-running")));
+        if any.stdout.trim() == "degraded" {
+            println!("\nSome units have \x1b[38;5;196mfailed\x1b[0m:");
             let stdout : String = try!(run(Command::new("systemctl").arg("--failed").env("SYSTEMD_COLORS", "1")));
             let re = Regex::new(r"\d loaded units listed").unwrap();
-            println!("{}", match re.split(stdout.as_ref()).next() {
+            print!("{}", match re.split(stdout.as_ref()).next() {
                 None => stdout.as_ref(),
                 Some(init) => init
             });
@@ -197,9 +210,10 @@ fn go() -> Result<()> {
 }
 
 fn main() {
-    go().unwrap_or_else(|err| match err {
-        NonZero(_) => {},
-        UnexpectedOutput(msg) => writeln!(io::stderr(), "{}", msg).unwrap(),
-        IoError(err) => writeln!(io::stderr(), "{}", err).unwrap()
+    std::process::exit(match go() {
+        Ok(()) => 0,
+        Err(NonZero(_)) => 2,
+        Err(UnexpectedOutput(msg)) => { writeln!(io::stderr(), "{}", msg).unwrap(); 2 } ,
+        Err(IoError(err)) => { writeln!(io::stderr(), "{}", err).unwrap(); 2 }
     });
 }
