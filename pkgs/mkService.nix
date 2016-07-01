@@ -16,6 +16,7 @@
 # TODO: Networking
 # TODO: RequiresMountsFor
 # TODO: Good security defaults, see systemd.service(5) and links
+# TODO: Restart
 
 /* DOC: User properties
 If create is true, user exists and the following properties hold:
@@ -30,6 +31,7 @@ assert user == {} || (user.name or "root") != "root";  # Can't specify options f
 assert (! user.createHome or false) || (user.home or null) != null;  # Must specify home with createHome
 assert (user.create or true) == true || (attrs.user == { create = false; name = user.name; });  # If create is false, other properties will not be applied
 assert killMode == "control-group" || killMode == "process";  # Strings are the best, no question
+assert lib.all (p: if lib.isDerivation p then true else throw "Path must be constructed from derivations, but found a ${builtins.typeOf p} in the path of ${name}") path;
 
 let
   chpst = lib.overrideDerivation runit (o: {
