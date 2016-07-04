@@ -28,7 +28,7 @@ class Help2ManFormatter(argparse.RawDescriptionHelpFormatter):
             super()._add_item(func, args)
 
     def add_usage(self, *args, prefix='Usage: '):
-        super().add_usage(*args, prefix=prefix)
+        super().add_usage(*args[:3], prefix=prefix)
 
 def new_parser(description=None, version='1.0'):
     if os.environ.get('ARGPARSE2MAN_DESC'):

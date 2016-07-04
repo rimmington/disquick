@@ -1,4 +1,4 @@
-{pkgs ? import <nixpkgs> {}}:
+{pkgs ? import <nixpkgs> { inherit system; }, system ? builtins.currentSystem}:
 
 pkgs.overridePackages (self: super: {
   mkService = self.callPackage ./mkService.nix {};
@@ -6,7 +6,7 @@ pkgs.overridePackages (self: super: {
   disnix = self.callPackage ./disnix { inherit (super) disnix; };
   dysnomiaDebian = self.callPackage ./disnix/dysnomiaDebian.nix {};
   disnixDebian = self.callPackage ./disnix/debian.nix {};
-  disquick = self.callPackage ./disquick {};
+  disquick = self.callPackage ./disquick { disquickPkgs = ./.; };
   disquickProps = self.callPackage ./disquick/manifest.nix {};
   remoteShadow = self.callPackage ./remoteShadow.nix {};
   mdocml = self.callPackage ./mdocml.nix {};
