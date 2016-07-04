@@ -6,6 +6,8 @@
 , postStartScript ? ""
 , description ? ""
 , startWithBoot ? true
+, restartOnFailure ? true
+, restartOnSuccess ? false
 , user ? {}
 , dependsOn ? []
 , environment ? {}
@@ -16,7 +18,6 @@
 # TODO: Networking
 # TODO: RequiresMountsFor
 # TODO: Good security defaults, see systemd.service(5) and links
-# TODO: Restart
 
 /* DOC: User properties
 If create is true, user exists and the following properties hold:
@@ -55,10 +56,9 @@ let
     in {
       inherit description environment path;
       wantedBy = if startWithBoot then [ "multi-user.target" ] else [];
-      serviceConfig = {
-        ExecStart = execStart;
-        KillMode = killMode;
-      } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
+      serviceConfig = { ExecStart = execStart; }
+        // commonServiceAttrs
+        // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
         // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; };
       wants = depNames;
       after = depNames;
@@ -101,6 +101,17 @@ let
         ${script}'';
     in runAsUser "${userScript}";
   execStartPost = lib.optionalString (postStartScript != "") (runAsUser "${writeScript "${name}-poststart" "#!${stdenv.shell} -e\n${postStartScript}"}");
+  commonServiceAttrs = {
+    KillMode = killMode;
+    Restart =
+      if restartOnSuccess && restartOnFailure
+        then "always"
+      else if restartOnFailure
+        then "on-failure"
+      else if restartOnSuccess
+        then "on-success"
+      else   "no";
+  };
   pathValue =
     let
       defaultPathPkgs = [ coreutils findutils gnugrep gnused systemd ];
@@ -132,7 +143,7 @@ in {
               (envDeclsGen "Environment=") ++
               (lib.optional (execStartPre != "") "ExecStartPre=${execStartPre}") ++
               (lib.optional (execStartPost != "") "ExecStartPost=${execStartPost}") ++
-              ["KillMode=${killMode}"]);
+              (lib.mapAttrsToList (name: value: "${name}=${value}") commonServiceAttrs));
           in "\n" + lib.concatStringsSep "\n" (unit ++ install ++ service); })
       ];
     };
