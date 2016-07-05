@@ -1,14 +1,16 @@
-{lib, python35, nix, disnix, stdenv, systemd, rsync, openssh, help2man, cli2man, mdocml, disquickPkgs, callPackage, system, pkgs}:
+{lib, python35, nix, disnix, stdenv, systemd, rsync, openssh, help2man, cli2man, mdocml, ronn, disquickPkgs, callPackage, system, pkgs}:
 
 let
   disctl = callPackage ./disctl {};
+  version = "1.0";
+  mkRonn3 = name: ''sed 's/^_/</g;s/ _script/<\&nbsp;script/g;s/\([^0-9a-zA-Z]\)_/\1</g;s/_/>/g' doc/${name}.3.md | ronn --manual="Disquick Manual" --organization="disquick ${version}" --date "1970-01-01" --roff --pipe - > $out/share/man/man3/${name}.3'';
 in stdenv.mkDerivation rec {
   name = "disquick";
-  version = "1.0";
   src = ./.;
-  buildInputs = [ python35 help2man cli2man mdocml ];
+  buildInputs = [ python35 help2man cli2man mdocml ronn ];
+  outputs = [ "out" "docdev" ];
   installPhase = ''
-    mkdir -p $out/bin $out/share/man/man1 $out/libexec/disquick
+    mkdir -p $out/bin $out/share/man/man{1,3} $out/libexec/disquick
     substitute ./disenv.py $out/bin/disenv \
       --replace libexec $out/libexec \
       --replace python3 ${python35}/bin/python3
@@ -32,6 +34,8 @@ in stdenv.mkDerivation rec {
     export MAN=1
     cli2man $out/bin/disctl --os 'disquick ${version}' -I disctl.mdoc | mandoc -Tman > $out/share/man/man1/disctl.1
     help2man -S 'disquick ${version}' --name "$(ARGPARSE2MAN_DESC=1 $out/bin/disenv)" -i disenv.1.h2m $out/bin/disenv > $out/share/man/man1/disenv.1
+    ${mkRonn3 "mkService"}
+    ${mkRonn3 "checkServices"}
   '';
   checkPhase =
     let

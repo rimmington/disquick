@@ -1,5 +1,7 @@
 {writeScript, buildEnv, writeTextFile, lib, stdenv, runit, remoteShadow, shadow, coreutils, findutils, gnugrep, gnused, systemd}:
 
+# NOTE: Remember to update the man page (disquick/doc/mkService.3.ronn) upon changing
+
 { name
 , script
 , preStartRootScript ? ""
@@ -18,14 +20,6 @@
 # TODO: Networking
 # TODO: RequiresMountsFor
 # TODO: Good security defaults, see systemd.service(5) and links
-
-/* DOC: User properties
-If create is true, user exists and the following properties hold:
-* If home is non-null, it is the $HOME of name
-* If createHome is true, home exists, is owned by name:name and is the working directory for script.
-  Contents not guaranteed to be owned by name. Will not move contents with home.
-* If allowLogin is true, shell is not nologin and vice versa
-*/
 
 assert ! (environment ? PATH);  # Use path over environment.PATH
 assert user == {} || (user.name or "root") != "root";  # Can't specify options for root
@@ -155,6 +149,7 @@ in {
     };
 
   # FIXME: run execStartPost while execStart is running
+  # TODO: Clean environment?
   script = writeScript "${name}-now" ''
     #!${stdenv.shell} -e
     ${lib.concatStringsSep "\n" (envDeclsGen "export ")}

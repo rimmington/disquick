@@ -62,5 +62,6 @@ access as well as Disnix D-Bus send permissions.
 Copyright \(co 2016 Deakin Software and Technology Innovation Lab.
 
 [SEE ALSO]
+.BR mkService (5),
 .BR disctl (1),
 .BR disnix-env (1)
