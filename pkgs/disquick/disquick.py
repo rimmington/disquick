@@ -1,4 +1,5 @@
 import abc
+import itertools
 import json
 import os
 import os.path
@@ -107,6 +108,7 @@ class Deployment():
     def deploy(self, keep_only=None):
         manifest = self.manifest()
         with self.remote.coordinator_profile() as p:
+            retarget_manifest_link(self.remote.target, p.current_local_generation_link())
             manifest.deploy(p)
             if keep_only:
                 p.delete_generations(keep_only)
@@ -238,3 +240,24 @@ class SyncingCoordinatorProfile(CoordinatorProfile):
         for name in filter(lambda n: n != 'default', os.listdir(self.local_path)):
             nix_store_path = os.readlink(self.local_path + '/' + name)
             self.remote.run_disnix(['disnix-copy-closure', dir_flag, '-t', self.remote.target, nix_store_path])
+
+def retarget_manifest_link(target, symlink_path):
+    original_manifest = os.readlink(symlink_path)
+    tree = xml.parse(original_manifest)
+    current_target = tree.find('./distribution/mapping/target').text
+    if current_target == target:
+        return
+
+    for elem in itertools.chain(tree.iterfind('./distribution//target'), tree.iterfind('./activation//target'), tree.iterfind('./targets/target/hostname')):
+        elem.text = target
+
+    with tempfile.TemporaryDirectory() as d:
+        temp_manifest = d + '/manifest'
+        with open(temp_manifest, 'w', encoding='utf-8') as f:
+            f.write('<?xml version="1.0"?>\n\n  ')
+            tree.write(f, encoding='unicode')
+            f.write('\n\n')
+        expr = '(import <nixpkgs> {{}}).stdenv.mkDerivation {{ name = "manifest.xml"; phases = [ "unpackPhase" "installPhase" ]; src = {}; installPhase = "ls; cp manifest $out"; }}'.format(d)
+        in_store = subprocess.check_output(['PATH_TO(nix)/bin/nix-build', '-E', expr]).strip()
+
+    Manifest(in_store, None).create_gc_root(symlink_path)
