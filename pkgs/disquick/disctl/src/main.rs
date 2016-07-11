@@ -1,4 +1,5 @@
 extern crate docopt;
+extern crate libc;
 extern crate regex;
 extern crate rustc_serialize;
 
@@ -11,6 +12,7 @@ const USAGE: &'static str = "
 Usage:
   disctl [<service>]
   disctl [-e] [-l] [-j | -f] <service>
+  disctl (--cat | --cat-script | --cat-pre | --cat-post) <service>
   disctl --clear-failed [<service>]
   disctl (-h | --version)
 
@@ -21,6 +23,10 @@ Options:
   -l --start        Launch the service
   -j --journal      Show service journal
   -f --follow       Follow service journal
+  --cat             Show service systemd unit file
+  --cat-script      Show service script
+  --cat-pre         Show service pre-start script
+  --cat-post        Show service post-start script
   --clear-failed    Clear failed service(s)
   -h --help         Show this screen
   --version         Show version
@@ -33,6 +39,10 @@ struct Args {
     flag_start: bool,
     flag_journal: bool,
     flag_follow: bool,
+    flag_cat: bool,
+    flag_cat_script: bool,
+    flag_cat_pre: bool,
+    flag_cat_post: bool,
     flag_clear_failed: bool,
     flag_version: bool
 }
@@ -167,6 +177,57 @@ fn journal(args: &Args) -> Result<bool> {
     }
 }
 
+fn cat(args: &Args) -> Result<bool> {
+    if args.flag_cat {
+        run_with_service(args, Command::new("systemctl").arg("cat")).map(|_| true)
+    } else {
+        Ok(false)
+    }
+}
+
+fn cat_script(args: &Args) -> Result<bool> {
+    fn cat_script_property(args: &Args, property: &str) -> Result<bool> {
+        let prop_deets : String = try!(run(Command::new("systemctl").arg("show").arg("-p").arg(property).arg(args.arg_service.as_ref().unwrap())));
+        if prop_deets == "" {  // May not have this property
+            return Ok(true);
+        }
+        let re = Regex::new(".* argv\\[\\]=(.+?) ;.*").unwrap();
+        let captures = try!(re.captures(&prop_deets).ok_or(UnexpectedOutput("bad systemctl show output".to_string())));
+        let script : &str = try!((&captures[1]).split_whitespace().last().ok_or(UnexpectedOutput("bad systemctl show output".to_string())));
+        println!("{}", tty_coloured(Colour::Blue, format!("# {}", script)));
+        run(Command::new("cat").arg(script)).map(|()| true)
+    }
+
+    if args.flag_cat_pre {
+        cat_script_property(args, "ExecStartPre")
+    } else if args.flag_cat_script {
+        cat_script_property(args, "ExecStart")
+    } else if args.flag_cat_post {
+        cat_script_property(args, "ExecStartPost")
+    } else {
+        Ok(false)
+    }
+}
+
+fn stdout_is_tty() -> bool {
+    unsafe { libc::isatty(libc::STDOUT_FILENO) != 0 }
+}
+
+enum Colour {
+    Blue
+}
+
+const ANSI_HIGHLIGHT_BLUE: &'static str = "\x1B[0;1;34m";
+const ANSI_NORMAL: &'static str = "\x1B[0m";
+
+fn tty_coloured(_colour: Colour, msg: String) -> String {
+    if stdout_is_tty() {
+        format!("{}{}{}", ANSI_HIGHLIGHT_BLUE, msg, ANSI_NORMAL)
+    } else {
+        msg
+    }
+}
+
 fn clear_failed(args: &Args) -> Result<bool> {
     if args.flag_clear_failed {
         run_with_service_optional(args.arg_service.as_ref(), Command::new("sudo").arg("systemctl").arg("reset-failed")).map(|_| true)
@@ -192,7 +253,7 @@ fn status(name: Option<&String>) -> Result<()> {
     Ok(())
 }
 
-const ACTIONS: &'static [fn(&Args) -> Result<bool>] = &[ stop, start, journal, clear_failed ];
+const ACTIONS: &'static [fn(&Args) -> Result<bool>] = &[ stop, start, journal, cat, cat_script, clear_failed ];
 
 fn go() -> Result<()> {
     let usage = if std::env::var("MAN") == Ok("1".to_string()) { USAGE.to_string() } else { USAGE.to_string() + "\nSee the man page for more details." };
