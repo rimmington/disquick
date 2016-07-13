@@ -14,10 +14,10 @@
 , dependsOn ? []
 , environment ? {}
 , path ? []
+, network ? true
 , killMode ? "control-group"
 }@attrs:
 
-# TODO: Networking
 # TODO: RequiresMountsFor
 # TODO: Good security defaults, see systemd.service(5) and links
 
@@ -43,7 +43,8 @@ let
         then "on-success"
       else   "no";
   } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
-    // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; };
+    // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; }
+    // lib.optionalAttrs (!network) { PrivateNetwork = true; };
   execStartPre = if preStartRootScript != "" || user.create
     then writeScript "${name}-prestart" ''
       #!${stdenv.shell} -e
@@ -112,7 +113,7 @@ in {
         wantedBy = if startWithBoot then [ "multi-user.target" ] else [];
         serviceConfig = { ExecStart = execStart; } // commonServiceAttrs;
         wants = depNames;
-        after = depNames;
+        after = depNames ++ lib.optional network "network.target";
       };
   };
 
@@ -134,7 +135,8 @@ in {
             lib.optional (description != "") "Description=${description}" ++
             lib.optionals (dependsOn != []) (
               let value = lib.concatMapStringsSep " " (s: "disnix-${baseNameOf s.disnix._pkg.outPath}.service") dependsOn;
-              in [ "Wants=${value}" "After=${value}" ]));
+              in [ "Wants=${value}" "After=${value}" ])) ++
+            lib.optional network "After=network.target";
           install = section "Install" (
             lib.optional startWithBoot "WantedBy=multi-user.target");
           service = section "Service" (

@@ -3,7 +3,7 @@ mkService(3) - realise a service description in a number of formats
 
 ## SYNOPSIS
 
-**pkgs.mkService {** name, script, preStartRootScript, postStartScript, description, startWithBoot, restartOnFailure, restartOnSuccess, user, dependsOn, environment, path, killMode **} -> {** attrs, serviceAttr, disnix, script **}**
+**pkgs.mkService {** name, script, preStartRootScript, postStartScript, description, startWithBoot, restartOnFailure, restartOnSuccess, user, dependsOn, environment, path, network, killMode **} -> {** attrs, serviceAttr, disnix, script **}**
 
 ## DESCRIPTION
 
@@ -45,6 +45,9 @@ Each script argument is a Bash script. _preStartRootScript_ is run as root, and 
 
 * _path_:
   A list of packages. The `bin` directory of each package is included in the `PATH` environment variable.
+
+* _network_:
+  Whether the service uses the network. If `false`, the service runs in its own network namespace with a single private loopback interface. Default `true`.
 
 ### user argument
 
