@@ -3,7 +3,7 @@ mkService(3) - realise a service description in a number of formats
 
 ## SYNOPSIS
 
-**pkgs.mkService {** name, script, preStartRootScript, postStartScript, description, startWithBoot, restartOnFailure, restartOnSuccess, user, dependsOn, environment, path, network, killMode **} -> {** attrs, serviceAttr, disnix, script **}**
+**pkgs.mkService {** name, script, preStartRootScript, postStartScript, description, startWithBoot, restartOnFailure, restartOnSuccess, user, dependsOn, environment, path, network, killMode, exports **} -> {** attrs, serviceAttr, disnix, script, exports **}**
 
 ## DESCRIPTION
 
@@ -16,6 +16,9 @@ mkService(3) - realise a service description in a number of formats
 
 * _description_:
   Optional very short description, as in "My Service replica server".
+
+* _exports_:
+  A passthrough attrset useful for providing additional information to dependents.
 
 ### Script arguments
 
@@ -86,6 +89,9 @@ Returns an attrset of service representations.
 
 * `script`:
   A Bash script that runs the service. Note the script will not clean the environment before starting.
+
+* `exports`:
+  _exports_, unaltered.
 
 ## EXAMPLE
 

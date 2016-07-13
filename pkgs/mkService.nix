@@ -16,6 +16,7 @@
 , path ? []
 , network ? true
 , killMode ? "control-group"
+, exports ? {}
 }@attrs:
 
 # TODO: RequiresMountsFor
@@ -103,7 +104,7 @@ let
     installPhase = "mv src/chpst $out";
   });
 in {
-  inherit attrs;
+  inherit attrs exports;
 
   serviceAttr = {
     "${name}" =
