@@ -15,6 +15,8 @@
 , environment ? {}
 , path ? []
 , network ? true
+, runtimeDirs ? []
+, runtimeDirsMode ? "0700"
 , killMode ? "control-group"
 , exports ? {}
 }@attrs:
@@ -28,6 +30,7 @@ assert (! user.createHome or false) || (user.home or null) != null;  # Must spec
 assert (user.create or true) == true || (attrs.user == { create = false; name = user.name; });  # If create is false, other properties will not be applied
 assert killMode == "control-group" || killMode == "process";  # Strings are the best, no question
 assert lib.all (p: if lib.isDerivation p then true else throw "Path must be constructed from derivations, but found a ${builtins.typeOf p} in the path of ${name}") path;
+assert lib.all (n: if builtins.replaceStrings ["/"] ["_"] n == n then true else throw "Runtime directory name may not contain /, but found ${n} in the runtimeDirs of ${name}") runtimeDirs;
 
 let
   user =
@@ -45,31 +48,32 @@ let
       else   "no";
   } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
     // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; }
+    // lib.optionalAttrs (execStopPost != "") { ExecStopPost = execStopPost; }
     // lib.optionalAttrs (!network) { PrivateNetwork = true; };
-  execStartPre = if preStartRootScript != "" || user.create
-    then writeScript "${name}-prestart" ''
-      #!${stdenv.shell} -e
-      ${lib.optionalString user.create ''
-        # Setup user
-        if ! ${stdenv.glibc.bin}/bin/getent passwd ${user.name} > /dev/null; then
-          ${remoteShadow}/bin/useradd --system --user-group ${user.name} --home ${if user.home == null then "/var/empty" else user.home}
-        fi
-        ${lib.optionalString (user.home != null) "${remoteShadow}/bin/usermod --home ${user.home} ${user.name}"}
-        ${lib.optionalString user.createHome ''
-          ${coreutils}/bin/mkdir -m 0700 -p ${user.home}
-          ${coreutils}/bin/chown ${user.name}:${user.name} ${user.home}''}
-        ${if user.allowLogin
-          then ''
-            if [[ "$(${stdenv.glibc.bin}/bin/getent passwd ${user.name} | ${coreutils}/bin/cut -d: -f7)" =~ /nologin$ ]]; then
-              ${remoteShadow}/bin/usermod --shell "" ${user.name}
-            fi
-          ''
-          else "${remoteShadow}/bin/usermod --shell ${shadow}/bin/nologin ${user.name}"}
-
-        # Service prestart
-      ''}
-      ${preStartRootScript}''
-    else "";
+  execStartPre = optionalScript "${name}-prestart" (lib.concatStrings [
+    (lib.optionalString user.create ''
+      # Setup user
+      if ! ${stdenv.glibc.bin}/bin/getent passwd ${user.name} > /dev/null; then
+        ${remoteShadow}/bin/useradd --system --user-group ${user.name} --home ${if user.home == null then "/var/empty" else user.home}
+      fi
+      ${lib.optionalString (user.home != null) "${remoteShadow}/bin/usermod --home ${user.home} ${user.name}"}
+      ${lib.optionalString user.createHome ''
+        ${coreutils}/bin/mkdir -m 0700 -p ${user.home}
+        ${coreutils}/bin/chown ${user.name}:${user.name} ${user.home}''}
+      ${if user.allowLogin
+        then ''
+          if [[ "$(${stdenv.glibc.bin}/bin/getent passwd ${user.name} | ${coreutils}/bin/cut -d: -f7)" =~ /nologin$ ]]; then
+            ${remoteShadow}/bin/usermod --shell "" ${user.name}
+          fi
+        ''
+        else "${remoteShadow}/bin/usermod --shell ${shadow}/bin/nologin ${user.name}"}
+    '')
+    (lib.concatMapStrings (p: ''
+      mkdir '/run/${p}' -m '${runtimeDirsMode}'
+      chown ${user.name}:nogroup '/run/${p}'
+    '') runtimeDirs)
+    (lib.optionalString (preStartRootScript != "") "\n# Service prestart\n${preStartRootScript}")
+  ]);
   execStart =
     let
       userScript = writeScript "${name}-start" ''
@@ -78,6 +82,10 @@ let
         ${script}'';
     in runAsUser "${userScript}";
   execStartPost = lib.optionalString (postStartScript != "") (runAsUser "${writeScript "${name}-poststart" "#!${stdenv.shell} -e\n${postStartScript}"}");
+  execStopPost = optionalScript "${name}-poststop" (lib.concatMapStrings (p: ''
+    rm -rf --one-file-system '/run/${p}'
+  '') runtimeDirs);
+  optionalScript = name: content: lib.optionalString (content != "") (writeScript name "#!${stdenv.shell} -e\n${content}");
   runAsUser = exec:
     if user.name == "root"
       then exec
@@ -160,5 +168,6 @@ in {
     ${execStartPre}
     ${execStart}
     ${execStartPost}
+    ${execStopPost}
   '';
 }
