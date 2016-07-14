@@ -54,10 +54,10 @@ Each script argument is a Bash script. _preStartRootScript_ is run as root, and 
 
 ### user argument
 
-The user argument is an attrset of user-related parameters.
+The _user_ argument is an attrset of user-related parameters.
 
 * _name_:
-  The user to run as. If "root", no other user parameters can be set.
+  The user to run as. If "root", no other user parameters can be set. Mandatory.
 
 * _create_:
   Whether to create the user before _preStartRootScript_. Must be `true` in order to set any other non-_name_ parameters. Default `true`.
@@ -66,7 +66,7 @@ The user argument is an attrset of user-related parameters.
   A list of supplementary group names to run _script_ and _postStartScript_ under. Default `[]`.
 
 * _home_:
-  The `$HOME` of _name_. If `null`, the system default location will be used. Default `null`.
+  The `$HOME` of _name_. If `null`, `/var/empty` will be used. Default `null`.
 
 * _createHome_:
   If `true`, _home_ exists, is owned by _name_:_name_ and is the working directory for _script_. Contents not guaranteed to be owned by _name_. Will not move contents with _home_. Default `true` if _home_ is non-`null`, else `false`.

@@ -10,7 +10,7 @@
 , startWithBoot ? true
 , restartOnFailure ? true
 , restartOnSuccess ? false
-, user ? {}
+, user
 , dependsOn ? []
 , environment ? {}
 , path ? []
@@ -23,7 +23,7 @@
 # TODO: Good security defaults, see systemd.service(5) and links
 
 assert ! (environment ? PATH);  # Use path over environment.PATH
-assert user == {} || (user.name or "root") != "root";  # Can't specify options for root
+assert user.name == "root" -> user == { name = "root"; };  # Can't specify options for root
 assert (! user.createHome or false) || (user.home or null) != null;  # Must specify home with createHome
 assert (user.create or true) == true || (attrs.user == { create = false; name = user.name; });  # If create is false, other properties will not be applied
 assert killMode == "control-group" || killMode == "process";  # Strings are the best, no question
