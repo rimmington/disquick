@@ -50,7 +50,7 @@ let
   } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
     // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; }
     // lib.optionalAttrs (execStopPost != "") { ExecStopPost = execStopPost; }
-    // lib.optionalAttrs (!network) { PrivateNetwork = true; };
+    // lib.optionalAttrs (!network) { PrivateNetwork = "yes"; };
   execStartPre = optionalScript "${name}-prestart" (lib.concatStrings [
     (lib.optionalString user.create ''
       # Setup user
