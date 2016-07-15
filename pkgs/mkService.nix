@@ -37,6 +37,7 @@ let
     let a = { name = "root"; groups = []; home = null; allowLogin = false; } // (attrs.user or {});
     in { create = a.name != "root"; createHome = a.home != null; } // a;
   commonServiceAttrs = {
+    PrivateTmp = "yes";
     KillMode = killMode;
     Restart =
       if restartOnSuccess && restartOnFailure
