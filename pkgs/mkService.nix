@@ -38,6 +38,7 @@ let
     in { create = a.name != "root"; createHome = a.home != null; } // a;
   commonServiceAttrs = {
     PrivateTmp = "yes";
+    PrivateDevices = "yes";
     KillMode = killMode;
     Restart =
       if restartOnSuccess && restartOnFailure
