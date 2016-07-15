@@ -179,7 +179,7 @@ fn journal(args: &Args) -> Result<bool> {
 
 fn cat(args: &Args) -> Result<bool> {
     if args.flag_cat {
-        run_with_service(args, Command::new("systemctl").arg("cat")).map(|_| true)
+        run_with_service(args, Command::new("systemctl").arg("cat").arg("--no-pager")).map(|_| true)
     } else {
         Ok(false)
     }
