@@ -17,6 +17,7 @@
 , network ? true
 , runtimeDirs ? []
 , runtimeDirsMode ? "0700"
+, permitNewPrivileges ? false
 , killMode ? "control-group"
 , exports ? {}
 }@attrs:
@@ -51,7 +52,8 @@ let
   } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
     // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; }
     // lib.optionalAttrs (execStopPost != "") { ExecStopPost = execStopPost; }
-    // lib.optionalAttrs (!network) { PrivateNetwork = "yes"; };
+    // lib.optionalAttrs (!network) { PrivateNetwork = "yes"; }
+    // lib.optionalAttrs (!permitNewPrivileges) { NoNewPrivileges = "yes"; };
   execStartPre = optionalScript "${name}-prestart" (lib.concatStrings [
     (lib.optionalString user.create ''
       # Setup user

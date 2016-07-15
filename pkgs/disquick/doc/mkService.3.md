@@ -58,6 +58,9 @@ Each script argument is a Bash script. _preStartRootScript_ is run as root, and 
 * _runtimeDirsMode_:
   The permissions/mode bits of directories created through _runtimeDirs_, as a string in a format accepted by `mkdir`(1). Default `"0700"`.
 
+* _permitNewPrivileges_:
+  If `false`, ensures that the service process and all its children can never gain new privileges and prohibits UID changes of any kind. This inhibits the use of setuid executables like `ping`. Default `false`.
+
 ### user argument
 
 The _user_ argument is an attrset of user-related parameters.
