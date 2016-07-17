@@ -40,6 +40,9 @@ let
   commonServiceAttrs = {
     PrivateTmp = "yes";
     PrivateDevices = "yes";
+    ProtectSystem = "yes";  # Can't use full since we might need to alter users
+    ProtectHome = "yes";
+    CapabilityBoundingSet = "~CAP_SYS_ADMIN";  # Required for the above to stick, see systemd.exec(5)
     KillMode = killMode;
     Restart =
       if restartOnSuccess && restartOnFailure
