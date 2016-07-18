@@ -37,6 +37,7 @@ let
   user =
     let a = { name = "root"; groups = []; home = null; allowLogin = false; } // (attrs.user or {});
     in { create = a.name != "root"; createHome = a.home != null; } // a;
+  systemdOptionalPaths = lib.concatMapStringsSep " " (p: ''-"${p}"'');
   commonServiceAttrs = {
     PrivateTmp = "yes";
     PrivateDevices = "yes";
@@ -46,7 +47,8 @@ let
     # Have to include /etc since we might need to alter users
     # TODO: See if the above can be fixed
     # Don't need to add /tmp with PrivateTmp
-    ReadWriteDirectories = lib.concatMapStringsSep " " (p: ''-"${p}"'') (["/etc"] ++ map (p: "/run/${p}") runtimeDirs ++ lib.optional (user.home != null) user.home);
+    ReadWriteDirectories = systemdOptionalPaths (["/etc"] ++ map (p: "/run/${p}") runtimeDirs ++ lib.optional (user.home != null) user.home);
+    InaccessibleDirectories = systemdOptionalPaths inaccessibleDirectories;
     KillMode = killMode;
     Restart =
       if restartOnSuccess && restartOnFailure
@@ -108,6 +110,51 @@ let
       finalPath = path ++ defaultPathPkgs;
     in lib.concatStringsSep ":" (map (d: "${d}/bin") finalPath ++ map (d: "${d}/sbin") finalPath);
   envDeclsGen = prefix: (lib.mapAttrsToList (name: value: "${prefix}${name}=${value}") (environment // { PATH = pathValue; }));
+  # http://systemd-devel.freedesktop.narkive.com/BDN0gv3G/use-of-capabilities-in-default-service-files
+  inaccessibleDirectories = [
+    "/boot"
+    "/media"
+    "/etc/dbus-1"
+    "/etc/modprobe.d"
+    "/etc/modules-load.d"
+    "/etc/postfix"
+    "/etc/ssh"
+    "/etc/sysctl.d"
+    "/run/console"
+    "/run/dbus"
+    "/run/lock"
+    "/run/mount"
+    "/run/systemd/generator"
+    "/run/systemd/system"
+    "/run/systemd/users"
+    "/run/udev"
+    "/sbin"
+    "/usr/lib/apt"
+    "/usr/lib/dpkg"
+    "/usr/lib/grub"
+    "/usr/lib/kernel"
+    "/usr/lib/modprobe.d"
+    "/usr/lib/modules"
+    "/usr/lib/modules-load.d"
+    "/usr/lib/rpm"
+    "/usr/lib/sysctl.d"
+    "/usr/lib/udev"
+    "/usr/local"
+    "/var/backups"
+    "/var/cron"
+    "/var/db"
+    "/var/lib/apt"
+    "/var/lib/dbus"
+    "/var/lib/dnf"
+    "/var/lib/dpkg"
+    "/var/lib/rpm"
+    "/var/lib/systemd"
+    "/var/lib/yum"
+    "/var/mail"
+    "/var/opt"
+    "/var/spool"
+    "/var/tmp"
+  ];
   chpst = lib.overrideDerivation runit (o: {
     name = "runit-${o.version}-chpst";
     # https://github.com/NixOS/nixpkgs/blob/7a37ac15b3fdca4dfa5c16fcc2a4de1294f5dc87/pkgs/tools/system/runit/default.nix
