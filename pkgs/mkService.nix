@@ -17,6 +17,7 @@
 , network ? true
 , runtimeDirs ? []
 , runtimeDirsMode ? "0700"
+, additionalWriteDirs ? []
 , permitNewPrivileges ? false
 , killMode ? "control-group"
 , exports ? {}
@@ -38,6 +39,7 @@ let
     let a = { name = "root"; groups = []; home = null; allowLogin = false; } // (attrs.user or {});
     in { create = a.name != "root"; createHome = a.home != null; } // a;
   systemdOptionalPaths = lib.concatMapStringsSep " " (p: ''-"${p}"'');
+  readWriteDirectories = ["/etc"] ++ map (p: "/run/${p}") runtimeDirs ++ lib.optional (user.home != null) user.home ++ additionalWriteDirs;
   commonServiceAttrs = {
     PrivateTmp = "yes";
     PrivateDevices = "yes";
@@ -47,8 +49,8 @@ let
     # Have to include /etc since we might need to alter users
     # TODO: See if the above can be fixed
     # Don't need to add /tmp with PrivateTmp
-    ReadWriteDirectories = systemdOptionalPaths (["/etc"] ++ map (p: "/run/${p}") runtimeDirs ++ lib.optional (user.home != null) user.home);
-    InaccessibleDirectories = systemdOptionalPaths inaccessibleDirectories;
+    ReadWriteDirectories = systemdOptionalPaths readWriteDirectories;
+    InaccessibleDirectories = systemdOptionalPaths (lib.subtractLists readWriteDirectories inaccessibleDirectories);
     KillMode = killMode;
     Restart =
       if restartOnSuccess && restartOnFailure

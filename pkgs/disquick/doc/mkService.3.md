@@ -58,6 +58,9 @@ Each script argument is a Bash script. _preStartRootScript_ is run as root, and 
 * _runtimeDirsMode_:
   The permissions/mode bits of directories created through _runtimeDirs_, as a string in a format accepted by `mkdir`(1). Default `"0700"`.
 
+* _additionalWriteDirs_:
+  Additional directories the service needs write access to. Note that this may make accessible directories typically made inaccessible for security hardening. The directories will not be automatically created or altered in any way; this argument only permits the possibility of write access. Default `[]`.
+
 * _permitNewPrivileges_:
   If `false`, ensures that the service process and all its children can never gain new privileges and prohibits UID changes of any kind. This inhibits the use of setuid executables like `ping`. Default `false`.
 
