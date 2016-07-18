@@ -38,8 +38,16 @@ let
   user =
     let a = { name = "root"; groups = []; home = null; allowLogin = false; } // (attrs.user or {});
     in { create = a.name != "root"; createHome = a.home != null; } // a;
-  systemdOptionalPaths = lib.concatMapStringsSep " " (p: ''-"${p}"'');
-  readWriteDirectories = ["/etc"] ++ map (p: "/run/${p}") runtimeDirs ++ lib.optional (user.home != null) user.home ++ additionalWriteDirs;
+  # Have to include /etc since we might need to alter users
+  # TODO: See if the above can be fixed
+  # Don't need to add /tmp with PrivateTmp
+  readWriteDirectories =
+    ["/etc"] ++
+    map (p: "/run/${p}") runtimeDirs ++
+    # Need parent dir writable to be able to create.
+    # TODO: This is not actually sufficient, since the parent might not exist either.
+    lib.optional (user.home != null) (dirOf user.home) ++
+    additionalWriteDirs;
   # http://www.slideshare.net/warpforge/effective-service-and-resource-management-with-systemd
   commonServiceAttrs = {
     PrivateTmp = "yes";
@@ -47,9 +55,6 @@ let
     ProtectHome = "yes";
     CapabilityBoundingSet = "~CAP_SYS_ADMIN";  # Required for the above to stick, see systemd.exec(5)
     ReadOnlyDirectories = "/";
-    # Have to include /etc since we might need to alter users
-    # TODO: See if the above can be fixed
-    # Don't need to add /tmp with PrivateTmp
     ReadWriteDirectories = systemdOptionalPaths readWriteDirectories;
     InaccessibleDirectories = systemdOptionalPaths (lib.subtractLists readWriteDirectories inaccessibleDirectories);
     MountFlags = "private";  # Avoid hanging on to mounts
@@ -116,6 +121,7 @@ let
       finalPath = path ++ defaultPathPkgs;
     in lib.concatStringsSep ":" (map (d: "${d}/bin") finalPath ++ map (d: "${d}/sbin") finalPath);
   envDeclsGen = prefix: (lib.mapAttrsToList (name: value: "${prefix}${name}=${value}") (environment // { PATH = pathValue; }));
+  systemdOptionalPaths = lib.concatMapStringsSep " " (p: ''-"${p}"'');
   # http://systemd-devel.freedesktop.narkive.com/BDN0gv3G/use-of-capabilities-in-default-service-files
   inaccessibleDirectories = [
     "/boot"
