@@ -40,9 +40,13 @@ let
   commonServiceAttrs = {
     PrivateTmp = "yes";
     PrivateDevices = "yes";
-    ProtectSystem = "yes";  # Can't use full since we might need to alter users
     ProtectHome = "yes";
     CapabilityBoundingSet = "~CAP_SYS_ADMIN";  # Required for the above to stick, see systemd.exec(5)
+    ReadOnlyDirectories = "/";
+    # Have to include /etc since we might need to alter users
+    # TODO: See if the above can be fixed
+    # Don't need to add /tmp with PrivateTmp
+    ReadWriteDirectories = lib.concatMapStringsSep " " (p: ''-"${p}"'') (["/etc"] ++ map (p: "/run/${p}") runtimeDirs ++ lib.optional (user.home != null) user.home);
     KillMode = killMode;
     Restart =
       if restartOnSuccess && restartOnFailure
