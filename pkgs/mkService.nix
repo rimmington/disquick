@@ -51,6 +51,7 @@ let
     # Don't need to add /tmp with PrivateTmp
     ReadWriteDirectories = systemdOptionalPaths readWriteDirectories;
     InaccessibleDirectories = systemdOptionalPaths (lib.subtractLists readWriteDirectories inaccessibleDirectories);
+    SystemCallArchitectures = "native";
     RestrictAddressFamilies = "~AF_APPLETALK AF_ATMPVC AF_AX25 AF_IPX AF_NETLINK AF_PACKET AF_X25";
     KillMode = killMode;
     Restart =
