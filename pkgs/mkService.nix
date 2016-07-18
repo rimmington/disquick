@@ -40,6 +40,7 @@ let
     in { create = a.name != "root"; createHome = a.home != null; } // a;
   systemdOptionalPaths = lib.concatMapStringsSep " " (p: ''-"${p}"'');
   readWriteDirectories = ["/etc"] ++ map (p: "/run/${p}") runtimeDirs ++ lib.optional (user.home != null) user.home ++ additionalWriteDirs;
+  # http://www.slideshare.net/warpforge/effective-service-and-resource-management-with-systemd
   commonServiceAttrs = {
     PrivateTmp = "yes";
     PrivateDevices = "yes";
@@ -51,6 +52,7 @@ let
     # Don't need to add /tmp with PrivateTmp
     ReadWriteDirectories = systemdOptionalPaths readWriteDirectories;
     InaccessibleDirectories = systemdOptionalPaths (lib.subtractLists readWriteDirectories inaccessibleDirectories);
+    MountFlags = "private";  # Avoid hanging on to mounts
     SystemCallArchitectures = "native";
     RestrictAddressFamilies = "~AF_APPLETALK AF_ATMPVC AF_AX25 AF_IPX AF_NETLINK AF_PACKET AF_X25";
     KillMode = killMode;
