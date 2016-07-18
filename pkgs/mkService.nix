@@ -54,9 +54,12 @@ let
       else   "no";
   } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
     // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; }
-    // lib.optionalAttrs (execStopPost != "") { ExecStopPost = execStopPost; }
     // lib.optionalAttrs (!network) { PrivateNetwork = "yes"; }
-    // lib.optionalAttrs (!permitNewPrivileges) { NoNewPrivileges = "yes"; };
+    // lib.optionalAttrs (!permitNewPrivileges) { NoNewPrivileges = "yes"; }
+    // lib.optionalAttrs (runtimeDirs != []) {
+          RuntimeDirectory = lib.concatMapStringsSep " " (p: ''"${p}"'') runtimeDirs;
+          RuntimeDirectoryMode = runtimeDirsMode;
+       };
   execStartPre = optionalScript "${name}-prestart" (lib.concatStrings [
     (lib.optionalString user.create ''
       # Setup user
@@ -76,7 +79,6 @@ let
         else "${remoteShadow}/bin/usermod --shell ${shadow}/bin/nologin ${user.name}"}
     '')
     (lib.concatMapStrings (p: ''
-      mkdir '/run/${p}' -m '${runtimeDirsMode}'
       chown ${user.name}:nogroup '/run/${p}'
     '') runtimeDirs)
     (lib.optionalString (preStartRootScript != "") "\n# Service prestart\n${preStartRootScript}")
@@ -89,9 +91,6 @@ let
         ${script}'';
     in runAsUser "${userScript}";
   execStartPost = lib.optionalString (postStartScript != "") (runAsUser "${writeScript "${name}-poststart" "#!${stdenv.shell} -e\n${postStartScript}"}");
-  execStopPost = optionalScript "${name}-poststop" (lib.concatMapStrings (p: ''
-    rm -rf --one-file-system '/run/${p}'
-  '') runtimeDirs);
   optionalScript = name: content: lib.optionalString (content != "") (writeScript name "#!${stdenv.shell} -e\n${content}");
   runAsUser = exec:
     if user.name == "root"
@@ -175,6 +174,5 @@ in {
     ${execStartPre}
     ${execStart}
     ${execStartPost}
-    ${execStopPost}
   '';
 }
