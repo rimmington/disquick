@@ -23,9 +23,6 @@
 , exports ? {}
 }@attrs:
 
-# TODO: RequiresMountsFor
-# TODO: Good security defaults, see systemd.service(5) and links
-
 assert ! (environment ? PATH);  # Use path over environment.PATH
 assert user.name == "root" -> user == { name = "root"; };  # Can't specify options for root
 assert (! user.createHome or false) || (user.home or null) != null;  # Must specify home with createHome
