@@ -44,7 +44,7 @@ Each script argument is a Bash script. _preStartRootScript_ is run as root, and 
 ### Environment arguments
 
 * _environment_:
-  An attrset of environment variables available to each of the service scripts.
+  An attrset of environment variables available to each of the service scripts. Note the [SECURITY][] section below.
 
 * _path_:
   A list of packages. The `bin` directory of each package is included in the `PATH` environment variable.
@@ -104,6 +104,10 @@ Returns an attrset of service representations.
 
 * `exports`:
   _exports_, unaltered.
+
+## SECURITY
+
+Do not store secrets or credentials in a service description. These details will likely end up in the Nix store, which is world-readable. The same applies to packages used by the service.
 
 ## EXAMPLE
 
