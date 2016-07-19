@@ -57,6 +57,7 @@ let
     ReadOnlyDirectories = "/";
     ReadWriteDirectories = systemdOptionalPaths readWriteDirectories;
     InaccessibleDirectories = systemdOptionalPaths (lib.subtractLists readWriteDirectories inaccessibleDirectories);
+    RequiresMountsFor = systemdRequiredPaths readWriteDirectories;
     MountFlags = "private";  # Avoid hanging on to mounts
     SystemCallArchitectures = "native";
     RestrictAddressFamilies = "~AF_APPLETALK AF_ATMPVC AF_AX25 AF_IPX AF_NETLINK AF_PACKET AF_X25";
@@ -74,7 +75,7 @@ let
     // lib.optionalAttrs (!network) { PrivateNetwork = "yes"; }
     // lib.optionalAttrs (!permitNewPrivileges) { NoNewPrivileges = "yes"; }
     // lib.optionalAttrs (runtimeDirs != []) {
-          RuntimeDirectory = lib.concatMapStringsSep " " (p: ''"${p}"'') runtimeDirs;
+          RuntimeDirectory = systemdRequiredPaths runtimeDirs;
           RuntimeDirectoryMode = runtimeDirsMode;
        };
   execStartPre = optionalScript "${name}-prestart" (lib.concatStrings [
@@ -122,6 +123,7 @@ let
     in lib.concatStringsSep ":" (map (d: "${d}/bin") finalPath ++ map (d: "${d}/sbin") finalPath);
   envDeclsGen = prefix: (lib.mapAttrsToList (name: value: "${prefix}${name}=${value}") (environment // { PATH = pathValue; }));
   systemdOptionalPaths = lib.concatMapStringsSep " " (p: ''-"${p}"'');
+  systemdRequiredPaths = lib.concatMapStringsSep " " (p: ''"${p}"'');
   # http://systemd-devel.freedesktop.narkive.com/BDN0gv3G/use-of-capabilities-in-default-service-files
   inaccessibleDirectories = [
     "/boot"
