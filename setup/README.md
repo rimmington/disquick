@@ -8,5 +8,5 @@ On ARM machines, adds `nixos-arm.dezgeg.me` as a binary cache.
 
 ```
 sudo ./nix.sh
-sudo ./disnix.sh $USER
+sudo ./disnix.sh
 ```
