@@ -108,7 +108,9 @@ class Deployment():
     def deploy(self, keep_only=None):
         manifest = self.manifest()
         with self.remote.coordinator_profile() as p:
-            retarget_manifest_link(self.remote.target, p.current_local_generation_link())
+            link = p.current_local_generation_link(must_exist=False)
+            if link:
+                retarget_manifest_link(self.remote.target, link)
             manifest.deploy(p)
             if keep_only:
                 p.delete_generations(keep_only)
