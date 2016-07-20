@@ -1,6 +1,8 @@
 #!/bin/bash
 set -eu
 
+user="${1:-$USER}"
+
 apt-get update
 apt-get install -y libsqlite3-dev libgc-dev libssl-dev libbz2-dev libcurl4-openssl-dev liblzma-dev libdbi-perl libdbd-sqlite3-perl libwww-curl-perl libsodium-dev git
 
@@ -46,5 +48,14 @@ groupadd -r nixbld
 for n in $(seq 1 10); do useradd -c "Nix build user $n" \
     -d /var/empty -g nixbld -G nixbld -M -N -r -s "$(which nologin)" \
             nixbld$n; done
+
+groupadd -r nix-users
+usermod -aG nix-users $user
+mkdir /etc/systemd/system/nix-daemon.socket.d
+cat <<EOF > /etc/systemd/system/nix-daemon.socket.d/10-socket-group.conf
+[Socket]
+SocketGroup=nix-users
+SocketMode=0660
+EOF
 
 echo "Done."
