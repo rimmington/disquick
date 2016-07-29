@@ -30,6 +30,7 @@ assert (user.create or true) == true || (attrs.user == { create = false; name = 
 assert killMode == "control-group" || killMode == "process";  # Strings are the best, no question
 assert lib.all (p: if lib.isDerivation p then true else throw "Path must be constructed from derivations, but found a ${builtins.typeOf p} in the path of ${name}") path;
 assert lib.all (n: if builtins.replaceStrings ["/"] ["_"] n == n then true else throw "Runtime directory name may not contain /, but found ${n} in the runtimeDirs of ${name}") runtimeDirs;
+assert lib.all (n: if builtins.replaceStrings [" "] ["_"] n == n then true else throw "Directory paths may not contain ' ', but found ${n} in ${name}") (runtimeDirs ++ additionalWriteDirs ++ [(user.home or "")]);
 
 let
   user =
@@ -119,8 +120,8 @@ let
       finalPath = path ++ defaultPathPkgs;
     in lib.concatStringsSep ":" (map (d: "${d}/bin") finalPath ++ map (d: "${d}/sbin") finalPath);
   envDeclsGen = prefix: (lib.mapAttrsToList (name: value: "${prefix}${name}=${value}") (environment // { PATH = pathValue; }));
-  systemdOptionalPaths = lib.concatMapStringsSep " " (p: ''-"${p}"'');
-  systemdRequiredPaths = lib.concatMapStringsSep " " (p: ''"${p}"'');
+  systemdOptionalPaths = lib.concatMapStringsSep " " (p: ''-${p}'');
+  systemdRequiredPaths = lib.concatMapStringsSep " " (p: ''${p}'');
   # http://systemd-devel.freedesktop.narkive.com/BDN0gv3G/use-of-capabilities-in-default-service-files
   inaccessibleDirectories = [
     "/boot"
