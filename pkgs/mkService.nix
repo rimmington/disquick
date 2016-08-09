@@ -15,6 +15,7 @@
 , environment ? {}
 , path ? []
 , network ? true
+, deviceAccess ? false
 , runtimeDirs ? []
 , runtimeDirsMode ? "0700"
 , additionalWriteDirs ? []
@@ -49,7 +50,6 @@ let
   # http://www.slideshare.net/warpforge/effective-service-and-resource-management-with-systemd
   commonServiceAttrs = {
     PrivateTmp = "yes";
-    PrivateDevices = "yes";
     ProtectHome = "yes";
     CapabilityBoundingSet = "~CAP_SYS_ADMIN";  # Required for the above to stick, see systemd.exec(5)
     ReadOnlyDirectories = "/";
@@ -71,6 +71,7 @@ let
   } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
     // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; }
     // lib.optionalAttrs (!network) { PrivateNetwork = "yes"; }
+    // lib.optionalAttrs (!deviceAccess) { PrivateDevices = "yes"; }
     // lib.optionalAttrs (!permitNewPrivileges) { NoNewPrivileges = "yes"; }
     // lib.optionalAttrs (runtimeDirs != []) {
           RuntimeDirectory = systemdRequiredPaths runtimeDirs;

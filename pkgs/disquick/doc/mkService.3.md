@@ -52,6 +52,9 @@ Each script argument is a Bash script. _preStartRootScript_ is run as root, and 
 * _network_:
   Whether the service uses the network. If `false`, the service runs in its own network namespace with a single private loopback interface. Default `true`.
 
+* _deviceAccess_:
+  Whether the service needs access to physical (non-pseudo-) devices. Default `false`.
+
 * _runtimeDirs_:
   A list of directory names to be created under `/run` before the service is launched and removed after it ends. The directories will have the access mode specified in _runtimeDirsMode_, and will be owned by _user.name_:`nogroup`. Names must not include a "/". Default `[]`.
 
