@@ -74,14 +74,21 @@ class Remote():
             self.run_disnix(['disnix-collect-garbage', '--interface', interface, '-d', infrastructure])
 
 class Deployment():
-    def __init__(self, filename, remote, build_on_remote=True):
+    def __init__(self, filename, remote, build_on_remote=True, use_binary_caches=None):
         self.filename = filename
         self.remote = remote
         self.build_on_remote = build_on_remote
+        self.use_binary_caches = use_binary_caches
+        if use_binary_caches is None:
+            self._binary_cache_args = []
+        elif use_binary_caches:
+            self._binary_cache_args = ['--option', 'use-binary-caches', 'true']
+        else:
+            self._binary_cache_args = ['--option', 'use-binary-caches', 'false']
 
     def _call_manifest(self, attr):
         expr = 'let pkgsPath = PATH_TO(disquickPkgs); system = "{}"; serviceSet = import {} {{ pkgs = import pkgsPath {{ inherit system; }}; inherit (props) infrastructure; }}; props = (import pkgsPath {{}}).disquickProps {{ inherit serviceSet system; hostname = "{}"; }}; in props.{}'.format(self.remote.system, self.filename, self.remote.target, attr)
-        return subprocess.check_output(['PATH_TO(nix)/bin/nix-build', '--no-out-link', '--show-trace', '-E', expr], universal_newlines=True).strip()
+        return subprocess.check_output(['PATH_TO(nix)/bin/nix-build', '--no-out-link', '--show-trace', '-E', expr] + self._binary_cache_args, universal_newlines=True).strip()
 
     def _build_on_remote(self):
         print('[coordinator]: Instantiating store derivations')

@@ -13,7 +13,9 @@ __description__ = 'Low-level service distribution commands'
 def run_manifest(args):
     filename = os.path.abspath(args.services)
     remote = disquick.Remote(args.target, args.system, ssh_user=args.ssh_user)
-    deployment = disquick.Deployment(filename, remote, build_on_remote=not args.no_build_on_target)
+    deployment = disquick.Deployment(filename, remote
+        , build_on_remote=not args.no_build_on_target
+        , use_binary_caches=False if args.no_binary_caches else None)
     print(deployment.manifest().filename)
 
 def run_activate(args):
@@ -42,6 +44,7 @@ def main(argv):
     manifest.add_argument('-t', '--target', help='Target hostname', required=True)
     manifest.add_argument('-y', '--system', help='Target system (i686-linux, armv7l-linux, ..)', required=True)
     manifest.add_argument('--no-build-on-target', help='Do not build any derivations on target', action='store_true')
+    manifest.add_argument('--no-binary-caches', help='Do not use any binary caches', action='store_true')
     manifest.set_defaults(func=run_manifest)
 
     activate = subparsers.add_parser('activate', help='Activate a Disnix manifest')
