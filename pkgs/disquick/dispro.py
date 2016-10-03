@@ -41,7 +41,7 @@ def main(argv):
 
     manifest = subparsers.add_parser('manifest', help='Generate a Disnix manifest')
     manifest.add_argument('-s', '--services', help='services.nix file', required=True, metavar='services.nix')
-    manifest.add_argument('-t', '--target', help='Target hostname', required=True)
+    manifest.add_argument('-t', '--target', help='Target host', metavar='HOSTNAME[:PORT]', required=True)
     manifest.add_argument('-y', '--system', help='Target system (i686-linux, armv7l-linux, ..)', required=True)
     manifest.add_argument('--no-build-on-target', help='Do not build any derivations on target', action='store_true')
     manifest.add_argument('--no-binary-caches', help='Do not use any binary caches', action='store_true')
@@ -54,7 +54,7 @@ def main(argv):
 
     gc = subparsers.add_parser('gc', help='Run GC on target')
     gc.add_argument('--keep-only', help='Number of generations to keep', type=int)
-    gc.add_argument('target', help='Target hostname')
+    gc.add_argument('target', help='Target hostname', metavar='HOSTNAME[:PORT]')
     gc.set_defaults(func=run_gc)
 
     args = parser.parse_args(argv)

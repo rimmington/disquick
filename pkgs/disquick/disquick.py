@@ -51,6 +51,15 @@ class Remote():
         self.run_disnix = disnix_environment.run
         self.target = target
         self.system = system
+        parts = target.rsplit(':')
+        self.hostname = parts[0]
+        if len(parts) > 1:
+            try:
+                self.port = str(int(parts[1]))
+            except ValueError as e:
+                raise ValueError('Port in target is not numeric') from e
+        else:
+            self.port = '22'
 
     @classmethod
     def from_manifest_file(cls, manifest, ssh_user=None):
@@ -224,13 +233,16 @@ class SyncingCoordinatorProfile(CoordinatorProfile):
 
     @cached_property
     def _remote_path(self):
-        return '{}@{}:{}'.format(self.remote.ssh_user, self.remote.target, CoordinatorProfile.TARGET_COORDINATOR_PROFILE_DIR)
+        return '{}@{}:{}'.format(self.remote.ssh_user, self.remote.hostname, CoordinatorProfile.TARGET_COORDINATOR_PROFILE_DIR)
 
     def _push_profile(self):
         print('[coordinator]: Sending coordinator profile to remote')
         self._rsync(self.local_path, self._remote_path)
         self._sync_coordinator_profile('--to')
-        subprocess.check_call(['PATH_TO(openssh)/bin/ssh', '{}@{}'.format(self.remote.ssh_user, self.remote.target), 'find {}/*-link | while read x; do nix-store --max-jobs 0 -r --add-root $x --indirect $(readlink $x); done'.format(CoordinatorProfile.TARGET_COORDINATOR_PROFILE_DIR)])
+        subprocess.check_call(['PATH_TO(openssh)/bin/ssh'
+                              , '-p', self.remote.port
+                              , '{}@{}'.format(self.remote.ssh_user, self.remote.hostname)
+                              , 'find {}/*-link | while read x; do nix-store --max-jobs 0 -r --add-root $x --indirect $(readlink $x); done'.format(CoordinatorProfile.TARGET_COORDINATOR_PROFILE_DIR)])
 
     def __enter__(self):
         print('[coordinator]: Retrieving coordinator profile from remote')
@@ -243,7 +255,12 @@ class SyncingCoordinatorProfile(CoordinatorProfile):
         return False  # Don't suppress any exception
 
     def _rsync(self, here, there):
-        subprocess.check_call(['PATH_TO(rsync)/bin/rsync', '-rl', '--delete-after', here + '/', there])
+        subprocess.check_call(['PATH_TO(rsync)/bin/rsync'
+                              , '-rl'
+                              , '--delete-after'
+                              , '-e', 'PATH_TO(openssh)/bin/ssh -p {}'.format(self.remote.port)
+                              , here + '/'
+                              , there])
 
     def _sync_coordinator_profile(self, dir_flag):
         for name in filter(lambda n: n != 'default', os.listdir(self.local_path)):
