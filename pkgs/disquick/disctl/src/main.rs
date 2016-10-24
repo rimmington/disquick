@@ -237,7 +237,7 @@ fn clear_failed(args: &Args) -> Result<bool> {
 }
 
 fn status(name: Option<&String>) -> Result<()> {
-    try!(run_with_service_optional(name, Command::new("systemctl").arg("status")));
+    try!(run_with_service_optional(name, Command::new("systemctl").arg("--no-pager").arg("status")));
     if let None = name {
         let any : AnyStdout = try!(run(Command::new("systemctl").arg("is-system-running")));
         if any.stdout.trim() == "degraded" {
