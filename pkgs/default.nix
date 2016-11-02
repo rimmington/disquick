@@ -12,4 +12,5 @@ pkgs.overridePackages (self: super: {
   mdocml = self.callPackage ./mdocml.nix {};
   cli2man = self.callPackage ./cli2man.nix {};
   ronn = self.callPackage ./ronn {};
+  domoticz = self.callPackage ./domoticz.nix {};
 })
