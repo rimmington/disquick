@@ -35,7 +35,7 @@ assert lib.all (n: if builtins.replaceStrings [" "] ["_"] n == n then true else 
 
 let
   user =
-    let a = { name = "root"; groups = []; home = null; allowLogin = false; } // (attrs.user or {});
+    let a = { name = "root"; groups = []; userGroups = []; home = null; allowLogin = false; } // (attrs.user or {});
     in { create = a.name != "root"; createHome = a.home != null; } // a;
   # Have to include /etc since we might need to alter users
   # TODO: See if the above can be fixed
@@ -83,6 +83,7 @@ let
       if ! ${stdenv.glibc.bin}/bin/getent passwd ${user.name} > /dev/null; then
         ${remoteShadow}/bin/useradd --system --user-group ${user.name} --home ${if user.home == null then "/var/empty" else user.home}
       fi
+      ${lib.concatMapStrings (group: "${remoteShadow}/bin/groupadd -f ${group}\n") user.userGroups}
       ${lib.optionalString (user.home != null) "${remoteShadow}/bin/usermod --home ${user.home} ${user.name}"}
       ${lib.optionalString user.createHome ''
         ${coreutils}/bin/mkdir -m 0700 -p ${user.home}
@@ -113,7 +114,9 @@ let
     if user.name == "root"
       then exec
       else
-        let suf = lib.optionalString (user.groups != []) ":${lib.concatStringsSep ":" user.groups}";
+        let
+          allGroups = user.groups ++ user.userGroups;
+          suf = lib.concatMapStrings (g: ":${g}") allGroups;
         in "${chpst} -u ${user.name}${suf} ${exec}";
   pathValue =
     let
