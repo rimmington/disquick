@@ -80,6 +80,9 @@ The _user_ argument is an attrset of user-related parameters.
 * _groups_:
   A list of supplementary group names to run _script_ and _postStartScript_ under. Default `[]`.
 
+* _userGroups_:
+  A list of supplementary group names to run _script_ and _postStartScript_ under. Default `[]`. These groups will be created if they do not already exist.
+
 * _home_:
   The `$HOME` of _name_. If `null`, `/var/empty` will be used. Default `null`.
 
