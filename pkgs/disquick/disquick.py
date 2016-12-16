@@ -284,6 +284,6 @@ def retarget_manifest_link(target, symlink_path):
             tree.write(f, encoding='unicode')
             f.write('\n\n')
         expr = '(import <nixpkgs> {{}}).stdenv.mkDerivation {{ name = "manifest.xml"; phases = [ "unpackPhase" "installPhase" ]; src = {}; installPhase = "ls; cp manifest $out"; }}'.format(d)
-        in_store = subprocess.check_output(['PATH_TO(nix)/bin/nix-build', '-E', expr]).strip()
+        in_store = subprocess.check_output(['PATH_TO(nix)/bin/nix-build', '--no-out-link', '-E', expr]).strip()
 
     Manifest(in_store, None).create_gc_root(symlink_path)
