@@ -136,7 +136,17 @@ fn disnix_running() -> Result<bool> {
 fn service_full_name(name: String) -> Result<String> {
     if try!(disnix_running()) {
         let out : String = try!(run(Command::new("systemctl").arg("list-units").arg("--no-legend").arg(format!("disnix-*-service-{}.service", name))));
-        out.lines().next().and_then(|l| l.split_whitespace().next().map(|w| w.to_string())).ok_or(UnexpectedOutput(format!("Cannot find service {}", name)))
+        out.lines()
+            .filter_map(|l| {
+                let mut words = l.split_whitespace();
+                let name = words.next();
+                let load = words.next();
+                if load == Some("loaded") {
+                    name.map(|w| w.to_string())
+                } else {
+                    None
+                }
+            }).next().ok_or(UnexpectedOutput(format!("Cannot find service {}", name)))
     } else {
         Ok(name)
     }
