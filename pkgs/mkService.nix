@@ -55,7 +55,6 @@ let
     ReadOnlyDirectories = "/";
     ReadWriteDirectories = systemdOptionalPaths readWriteDirectories;
     InaccessibleDirectories = systemdOptionalPaths (lib.subtractLists readWriteDirectories inaccessibleDirectories);
-    RequiresMountsFor = systemdRequiredPaths readWriteDirectories;
     MountFlags = "private";  # Avoid hanging on to mounts
     SystemCallArchitectures = "native";
     RestrictAddressFamilies = "~AF_APPLETALK AF_ATMPVC AF_AX25 AF_IPX AF_NETLINK AF_PACKET AF_X25";
@@ -77,6 +76,9 @@ let
           RuntimeDirectory = systemdRequiredPaths runtimeDirs;
           RuntimeDirectoryMode = runtimeDirsMode;
        };
+  commonUnitAttrs = {
+    RequiresMountsFor = systemdRequiredPaths readWriteDirectories;
+  };
   execStartPre = optionalScript "${name}-prestart" (lib.concatStrings [
     (lib.optionalString user.create ''
       # Setup user
@@ -194,6 +196,7 @@ in {
         inherit description environment path;
         wantedBy = if startWithBoot then [ "multi-user.target" ] else [];
         serviceConfig = { ExecStart = execStart; } // commonServiceAttrs;
+        unitConfig = commonUnitAttrs;
         wants = depNames;
         after = depNames ++ lib.optional network "network.target";
       };
@@ -217,8 +220,9 @@ in {
             lib.optional (description != "") "Description=${description}" ++
             lib.optionals (dependsOn != []) (
               let value = lib.concatMapStringsSep " " (s: "disnix-${baseNameOf s.disnix._pkg.outPath}.service") dependsOn;
-              in [ "Wants=${value}" "After=${value}" ])) ++
-            lib.optional network "After=network.target";
+              in [ "Wants=${value}" "After=${value}" ]) ++
+            lib.optional network "After=network.target" ++
+            (lib.mapAttrsToList (name: value: "${name}=${value}") commonUnitAttrs));
           install = section "Install" (
             lib.optional startWithBoot "WantedBy=multi-user.target");
           service = section "Service" (
