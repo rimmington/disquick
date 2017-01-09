@@ -50,6 +50,7 @@ struct Args {
 #[derive(Debug)]
 enum Error {
     NonZero(Option<i32>),
+    NoSuchService,
     UnexpectedOutput(String),
     IoError(io::Error)
 }
@@ -253,7 +254,11 @@ fn clear_failed(args: &Args) -> Result<bool> {
 }
 
 fn status(name: Option<&String>) -> Result<()> {
-    try!(run_with_service_optional(name, Command::new("systemctl").arg("--no-pager").arg("status")));
+    match run_with_service_optional(name, Command::new("systemctl").arg("--no-pager").arg("status")) {
+        Err(NonZero(Some(3))) => return Err(NoSuchService),
+        Err(e) => return Err(e),
+        Ok(_) => {}
+    };
     if let None = name {
         let any : AnyStdout = try!(run(Command::new("systemctl").arg("is-system-running")));
         if any.stdout.trim() == "degraded" {
@@ -290,6 +295,7 @@ fn main() {
     std::process::exit(match go() {
         Ok(()) => 0,
         Err(NonZero(_)) => 2,
+        Err(NoSuchService) => 3,
         Err(UnexpectedOutput(msg)) => { writeln!(io::stderr(), "{}", msg).unwrap(); 2 } ,
         Err(IoError(err)) => { writeln!(io::stderr(), "{}", err).unwrap(); 2 }
     });
