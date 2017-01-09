@@ -224,15 +224,21 @@ fn stdout_is_tty() -> bool {
 }
 
 enum Colour {
-    Blue
+    Blue,
+    Red
 }
 
 const ANSI_HIGHLIGHT_BLUE: &'static str = "\x1B[0;1;34m";
+const ANSI_HIGHLIGHT_RED: &'static str = "\x1B[38;5;196m";
 const ANSI_NORMAL: &'static str = "\x1B[0m";
 
-fn tty_coloured(_colour: Colour, msg: String) -> String {
+fn tty_coloured(colour: Colour, msg: String) -> String {
     if stdout_is_tty() {
-        format!("{}{}{}", ANSI_HIGHLIGHT_BLUE, msg, ANSI_NORMAL)
+        let code = match colour {
+            Colour::Blue => ANSI_HIGHLIGHT_BLUE,
+            Colour::Red  => ANSI_HIGHLIGHT_RED
+        };
+        format!("{}{}{}", code, msg, ANSI_NORMAL)
     } else {
         msg
     }
@@ -251,7 +257,7 @@ fn status(name: Option<&String>) -> Result<()> {
     if let None = name {
         let any : AnyStdout = try!(run(Command::new("systemctl").arg("is-system-running")));
         if any.stdout.trim() == "degraded" {
-            println!("\nSome units have \x1b[38;5;196mfailed\x1b[0m:");
+            println!("\nSome units have {}:", tty_coloured(Colour::Red, "failed".to_string()));
             let stdout : String = try!(run(Command::new("systemctl").arg("--failed").env("SYSTEMD_COLORS", if stdout_is_tty() { "1" } else { "0" })));
             let re = Regex::new(r"\d loaded units listed").unwrap();
             print!("{}", match re.split(stdout.as_ref()).next() {
