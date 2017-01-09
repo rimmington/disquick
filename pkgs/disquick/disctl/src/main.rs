@@ -252,7 +252,7 @@ fn status(name: Option<&String>) -> Result<()> {
         let any : AnyStdout = try!(run(Command::new("systemctl").arg("is-system-running")));
         if any.stdout.trim() == "degraded" {
             println!("\nSome units have \x1b[38;5;196mfailed\x1b[0m:");
-            let stdout : String = try!(run(Command::new("systemctl").arg("--failed").env("SYSTEMD_COLORS", "1")));
+            let stdout : String = try!(run(Command::new("systemctl").arg("--failed").env("SYSTEMD_COLORS", if stdout_is_tty() { "1" } else { "0" })));
             let re = Regex::new(r"\d loaded units listed").unwrap();
             print!("{}", match re.split(stdout.as_ref()).next() {
                 None => stdout.as_ref(),
