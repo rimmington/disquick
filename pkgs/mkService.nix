@@ -21,6 +21,7 @@
 , additionalWriteDirs ? []
 , permitNewPrivileges ? false
 , killMode ? "control-group"
+, startLimitIntervalSec ? "20s"
 , exports ? {}
 }@attrs:
 
@@ -67,6 +68,7 @@ let
       else if restartOnSuccess
         then "on-success"
       else   "no";
+    StartLimitInterval = startLimitIntervalSec;
   } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
     // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; }
     // lib.optionalAttrs (!network) { PrivateNetwork = "yes"; }
