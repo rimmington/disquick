@@ -21,7 +21,7 @@
 , additionalWriteDirs ? []
 , permitNewPrivileges ? false
 , killMode ? "control-group"
-, startLimitIntervalSec ? "20s"
+, startLimitInterval ? "20s"
 , exports ? {}
 }@attrs:
 
@@ -69,7 +69,7 @@ let
         then "on-success"
       else   "no";
     StartLimitBurst = "5";
-    StartLimitInterval = startLimitIntervalSec;
+    StartLimitInterval = startLimitInterval;  # Here instead of in [Unit] for backwards compat
   } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
     // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; }
     // lib.optionalAttrs (!network) { PrivateNetwork = "yes"; }
