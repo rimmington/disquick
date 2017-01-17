@@ -3,7 +3,7 @@ mkService(3) - realise a service description in a number of formats
 
 ## SYNOPSIS
 
-**pkgs.mkService {** name, script, preStartRootScript, postStartScript, description, startWithBoot, restartOnFailure, restartOnSuccess, user, dependsOn, environment, path, network, killMode, exports **} -> {** attrs, serviceAttr, disnix, script, exports **}**
+**pkgs.mkService {** name, script, user, ... **} -> {** attrs, serviceAttr, disnix, script, exports **}**
 
 ## DESCRIPTION
 
@@ -29,14 +29,17 @@ Each script argument is a Bash script. _preStartRootScript_ is run as root, and 
 * _startWithBoot_:
   Whether to start the service on boot. Default `true`.
 
+* _dependsOn_:
+  A list of other services this service must be started after. Values of the list are other `mkService` return values. Default `[]` (empty).
+
 * _restartOnFailure_:
   Whether to restart the service if it fails. Restarts are throttled, so this won't restart endlessly. See `systemd.service`(5) for more details on what "failure" means. Default `true`.
 
 * _restartOnSuccess_:
   Whether to restart the service if it terminates cleanly. Default `false`.
 
-* _dependsOn_:
-  A list of other services this service must be started after. Values of the list are other `mkService` return values. Default `[]` (empty).
+* _startLimitInterval_:
+  Configures restart throttling. If a service restarts more than 5 times within this time limit, it will no longer be restarted automatically. Format is something like "30s" or "2min 5s", see `systemd.time`(7). Default `"20s"`.
 
 * _killMode_:
   See `systemd.service`(5). Accepts "control-group" or "process". Default "control-group".
