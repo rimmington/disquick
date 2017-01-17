@@ -68,6 +68,7 @@ let
       else if restartOnSuccess
         then "on-success"
       else   "no";
+    StartLimitBurst = "5";
     StartLimitInterval = startLimitIntervalSec;
   } // lib.optionalAttrs (execStartPre != "") { ExecStartPre = execStartPre; }
     // lib.optionalAttrs (execStartPost != "") { ExecStartPost = execStartPost; }
