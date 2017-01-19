@@ -1,4 +1,4 @@
-{writeScript, buildEnv, writeTextFile, lib, stdenv, runit, remoteShadow, shadow, coreutils, findutils, gnugrep, gnused, systemd}:
+{writeScript, buildEnv, writeTextFile, lib, stdenv, runit, remoteShadow, shadow, coreutils, findutils, gnugrep, gnused, remoteSystemd}:
 
 # NOTE: Remember to update the man page (disquick/doc/mkService.3.ronn) upon changing
 
@@ -123,12 +123,12 @@ let
           allGroups = user.groups ++ user.userGroups;
           suf = lib.concatMapStrings (g: ":${g}") allGroups;
         in "${chpst} -u ${user.name}${suf} ${exec}";
-  pathValue =
-    let
-      defaultPathPkgs = [ coreutils findutils gnugrep gnused systemd ];
-      finalPath = path ++ defaultPathPkgs;
-    in lib.concatStringsSep ":" (map (d: "${d}/bin") finalPath ++ map (d: "${d}/sbin") finalPath);
-  envDeclsGen = prefix: (lib.mapAttrsToList (name: value: "${prefix}${name}=${value}") (environment // { PATH = pathValue; }));
+  finalPath =
+    let defaultPathPkgs = [ coreutils findutils gnugrep gnused remoteSystemd ];
+    in  path ++ defaultPathPkgs;
+  envDeclsGen =
+    let pathValue = lib.concatStringsSep ":" (map (d: "${d}/bin") finalPath ++ map (d: "${d}/sbin") finalPath);
+    in  prefix: (lib.mapAttrsToList (name: value: "${prefix}${name}=${value}") (environment // { PATH = pathValue; }));
   systemdOptionalPaths = lib.concatMapStringsSep " " (p: ''-${p}'');
   systemdRequiredPaths = lib.concatMapStringsSep " " (p: ''${p}'');
   # http://systemd-devel.freedesktop.narkive.com/BDN0gv3G/use-of-capabilities-in-default-service-files
@@ -196,7 +196,8 @@ in {
     "${name}" =
       let depNames = map (s: s.attrs.name + ".service") dependsOn;
       in {
-        inherit description environment path;
+        inherit description environment;
+        path = lib.mkForce finalPath;
         wantedBy = if startWithBoot then [ "multi-user.target" ] else [];
         serviceConfig = { ExecStart = execStart; } // commonServiceAttrs;
         unitConfig = commonUnitAttrs;
