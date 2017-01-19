@@ -1,8 +1,9 @@
-{runCommand, systemd}:
+{runCommand, bash, systemd}:
 
 let
   trySbin = binary: sub: ''
     cat <<"EOF" > $out/bin/${baseNameOf binary}
+    #!${bash}/bin/bash
     # Use local ${baseNameOf binary} if available; avoids version issues
     if [ -f ${binary} ]; then
       ${binary} "$@"

@@ -1,8 +1,9 @@
-{runCommand, shadow, su}:
+{runCommand, bash, shadow, su}:
 
 let
   trySbin = binary: sub: ''
     cat <<"EOF" > $out/bin/${baseNameOf binary}
+    #!${bash}/bin/bash
     # Use local ${baseNameOf binary} if available; avoids PAM issues
     if [ -f ${binary} ]; then
       ${binary} "$@"
