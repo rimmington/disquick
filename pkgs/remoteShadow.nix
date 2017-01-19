@@ -6,9 +6,9 @@ let
     #!${bash}/bin/bash
     # Use local ${baseNameOf binary} if available; avoids PAM issues
     if [ -f ${binary} ]; then
-      ${binary} "$@"
+      exec ${binary} "$@"
     else
-      ${sub}/bin/${baseNameOf binary} "$@"
+      exec ${sub}/bin/${baseNameOf binary} "$@"
     fi
     EOF
   '';
