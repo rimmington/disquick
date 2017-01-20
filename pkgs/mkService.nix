@@ -133,6 +133,7 @@ let
   systemdRequiredPaths = lib.concatMapStringsSep " " (p: ''${p}'');
   # http://systemd-devel.freedesktop.narkive.com/BDN0gv3G/use-of-capabilities-in-default-service-files
   inaccessibleDirectories = [
+    # Additional directories are made inaccessible via ProtectHome
     "/boot"
     "/media"
     "/etc/dbus-1"

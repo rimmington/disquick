@@ -9,6 +9,17 @@ mkService(3) - realise a service description in a number of formats
 
 `mkService` transforms a description of a system service into descriptions for NixOS and Disnix as well as a shell script.
 
+The service is executed in a clean, restricted environment via systemd:
+
+* Only environment variables explicitly specified in the _environment_ argument and the systemd-generated variables (see `systemd.exec`(5)) are available to the service.
+* The `PATH` environment variable includes the following utilities: systemd, Coreutils, findutils, GNU grep, GNU sed. You can add more by adding Nix packages to the _path_ argument.
+* The filesystem is mostly read-only, irrespective of filesystem permissions. The directories specified by _user.home_ and _runtimeDirs_ are writable by default; _additionalWriteDirs_ are writable subject to filesystem permissions.
+* A number of directories are inaccessible, including the entirety of `/home`, `/root`, `/media` and `/boot`; this can be carefully overridden via _additionalWriteDirs_. See the `mkService` source for a full list.
+* The service has a private `/tmp` directory, accessible only by itself.
+* Access to physical devices in `/dev` is not permitted by default (see _deviceAccess_). Pseudo-devices like `/dev/null` and `/dev/random` are still available.
+
+## OPTIONS
+
 ### Descriptive arguments
 
 * _name_:
