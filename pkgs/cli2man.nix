@@ -5,8 +5,8 @@ python27Packages.buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "rimmington";
     repo = "cli2man";
-    rev = "184f75621e660c7d91f1ee379b0a453f03806e15";
-    sha256 = "19xnxlpy2f1wav9pqqvbmbxvmvk8qr563ngcpxp9bh5n6w20fqah";
+    rev = "3f4642d46290ef3fdab7e6b0a3fe5b8d69fa85da";
+    sha256 = "1nvvl5c2nh8frwznvfkl4j850hffjka5cd5vc7rxlz5x0q7dka8q";
   };
 
   propagatedBuildInputs = with python27Packages; [ docopt ];

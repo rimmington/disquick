@@ -32,7 +32,7 @@ in stdenv.mkDerivation rec {
     ln -s ${disctl}/bin/disctl $out/bin/disctl
 
     export MAN=1
-    cli2man $out/bin/disctl --os 'disquick ${version}' -I disctl.mdoc | mandoc -Tman > $out/share/man/man1/disctl.1
+    cli2man $out/bin/disctl --os 'disquick ${version}' --date 1970-01-01 -I disctl.mdoc | mandoc -Tman > $out/share/man/man1/disctl.1
     help2man -S 'disquick ${version}' --name "$(ARGPARSE2MAN_DESC=1 $out/bin/disenv)" -i disenv.1.h2m $out/bin/disenv > $out/share/man/man1/disenv.1
     ${mkRonn3 "mkService"}
     ${mkRonn3 "checkServices"}
