@@ -33,6 +33,7 @@ assert killMode == "control-group" || killMode == "process";  # Strings are the 
 assert lib.all (p: if lib.isDerivation p then true else throw "Path must be constructed from derivations, but found a ${builtins.typeOf p} in the path of ${name}") path;
 assert lib.all (n: if builtins.replaceStrings ["/"] ["_"] n == n then true else throw "Runtime directory name may not contain /, but found ${n} in the runtimeDirs of ${name}") runtimeDirs;
 assert lib.all (n: if builtins.replaceStrings [" "] ["_"] n == n then true else throw "Directory paths may not contain ' ', but found ${n} in ${name}") (runtimeDirs ++ additionalWriteDirs ++ [(user.home or "")]);
+assert lib.all (v: if builtins.isAttrs v && (v.type or "") == "mkService" then true else throw "Value in dependsOn does not look like a service: ${lib.showVal v}") dependsOn;
 
 let
   user =
@@ -251,4 +252,6 @@ in {
     ${execStart}
     ${execStartPost}
   '';
+
+  type = "mkService";
 }
