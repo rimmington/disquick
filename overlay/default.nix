@@ -1,6 +1,6 @@
-{pkgs ? import <nixpkgs> { inherit system; }, system ? builtins.currentSystem}:
+self: super:
 
-pkgs.overridePackages (self: super: {
+{
   mkService = self.callPackage ./mkService.nix {};
   checkServices = self.callPackage ./checkServices.nix {};
   disnix = self.callPackage ./disnix { inherit (super) disnix; };
@@ -13,4 +13,4 @@ pkgs.overridePackages (self: super: {
   mdocml = self.callPackage ./mdocml.nix {};
   cli2man = self.callPackage ./cli2man.nix {};
   ronn = self.callPackage ./ronn {};
-})
+}
