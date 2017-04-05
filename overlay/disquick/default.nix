@@ -1,4 +1,4 @@
-{lib, python35, nix, disnix, stdenv, systemd, rsync, openssh, help2man, cli2man, mdocml, ronn, disquickPkgs, callPackage, system, pkgs}:
+{lib, python35, nix, disnix, stdenv, systemd, rsync, openssh, help2man, cli2man, mdocml, ronn, disquickProps, callPackage, system, pkgs}:
 
 let
   disctl = callPackage ./disctl {};
@@ -23,8 +23,7 @@ in stdenv.mkDerivation rec {
       --replace 'PATH_TO(nix)' ${nix.out} \
       --replace 'PATH_TO(openssh)' ${openssh} \
       --replace 'PATH_TO(rsync)' ${rsync} \
-      --replace 'PATH_TO(openssh)' ${openssh} \
-      --replace 'PATH_TO(disquickPkgs)' ${disquickPkgs}
+      --replace 'PATH_TO(openssh)' ${openssh}
     substitute ./dispro.py $out/libexec/disquick/dispro \
       --replace python3 ${python35}/bin/python3
     chmod a+x $out/libexec/disquick/dispro
@@ -39,10 +38,12 @@ in stdenv.mkDerivation rec {
   '';
   checkPhase =
     let
-      props = (import disquickPkgs { inherit system; }).disquickProps { inherit serviceSet system; hostname = "localhost"; };
+      props = disquickProps { inherit serviceSet system; hostname = "localhost"; };
       serviceSet = import ./test-services.nix { inherit pkgs; inherit (props) infrastructure; };
-      manifest = props.manifest;
-    in "[ -e ${manifest} ]";
+    in ''
+      [ -e ${props.manifest} ]
+      [ -e ${props.distributedDerivation} ]
+    '';
   doCheck = true;
 
   meta = {

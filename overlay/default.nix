@@ -6,7 +6,7 @@ self: super:
   disnix = self.callPackage ./disnix { inherit (super) disnix; };
   dysnomiaDebian = self.callPackage ./disnix/dysnomiaDebian.nix {};
   disnixDebian = self.callPackage ./disnix/debian.nix {};
-  disquick = self.callPackage ./disquick { disquickPkgs = ./.; };
+  disquick = self.callPackage ./disquick {};
   disquickProps = self.callPackage ./disquick/manifest.nix {};
   remoteShadow = self.callPackage ./remoteShadow.nix {};
   remoteSystemd = self.callPackage ./remoteSystemd.nix {};
