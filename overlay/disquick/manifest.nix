@@ -9,7 +9,7 @@ let
     passAsFile = [ "xml" ];
     buildCommand = "${libxslt.bin}/bin/xsltproc ${xsl} $xmlPath > $out";
   };
-  infrastructure = { target = { inherit hostname system; }; };
+  infrastructure = { target = { inherit system; properties = { inherit hostname; }; }; };
   servicesFun = {system, pkgs, distribution, invDistribution}: pkgs.lib.mapAttrs' (name: s: { name = s.attrs.name; value = s.disnix; }) serviceSet;
   distributionFun = {infrastructure}: lib.mapAttrs' (name: s: { name = s.attrs.name; value = builtins.attrValues infrastructure; }) serviceSet;
   targetProperty = "hostname";

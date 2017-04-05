@@ -1,8 +1,8 @@
 diff --git a/dysnomia-modules/process.in b/dysnomia-modules/process.in
-index 0b1c3f3..5e63f0f 100644
+index 455cff9..0d97467 100644
 --- a/dysnomia-modules/process.in
 +++ b/dysnomia-modules/process.in
-@@ -126,7 +126,6 @@ case "$1" in
+@@ -137,7 +137,6 @@ case "$1" in
              if [ -e @systemd_rundir@/system/disnix-$serviceName.service ]
              then
                  removeSystemdService @systemd_rundir@/system/disnix-$serviceName.service $2
@@ -11,53 +11,39 @@ index 0b1c3f3..5e63f0f 100644
          elif [ "@job_template@" = "init.d" ]
          then
 diff --git a/dysnomia-modules/util b/dysnomia-modules/util
-index 093858c..735e26c 100644
+index 8b41a3f..08dd973 100644
 --- a/dysnomia-modules/util
 +++ b/dysnomia-modules/util
-@@ -376,19 +376,17 @@ removeSystemdService()
+@@ -463,16 +463,19 @@ removeSystemdService()
  {
      local jobsDir=$(dirname "$1")
      local jobName=$(basename "$1" .service)
--    
--    if [ -f $jobsDir/dysnomia.target ]
--    then
--        rm $jobsDir/dysnomia.target.wants/$jobName.service
--        rmdir --ignore-fail-on-non-empty $jobsDir/dysnomia.target.wants
--    fi
--    
 +
-+    systemctl disable $jobsDir/$jobName.service
-+
-     rm "$1"
      
      if [ -f $2/etc/socket ]
      then
-         rm $jobsDir/$jobName.socket
+         rm -f $jobsDir/dysnomia.target.wants/$jobName.socket
+         rm -f $jobsDir/$jobName.socket
+     else
+-        rm -f $jobsDir/dysnomia.target.wants/$jobName.service
++        systemctl disable $jobsDir/$jobName.service
      fi
+     
+     rm -f "$1"
 +
 +    systemctl --system daemon-reload
  }
  
  # Activates a systemd job and configures its wanted dependencies
-@@ -407,13 +405,7 @@ activateSystemdService()
-     then
-         cat $2/etc/systemd-config >> "$1"
+@@ -511,10 +514,7 @@ activateSystemdService()
+         
+         startUnit=$jobName.socket
+     else
+-        if [ -f $jobsDir/dysnomia.target ]
+-        then
+-            ln -sf ../$jobName.service $jobsDir/dysnomia.target.wants/$jobName.service
+-        fi
++        systemctl enable $jobsDir/$jobName.service
+         
+         startUnit=$jobName.service
      fi
--    
--    if [ -f $jobsDir/dysnomia.target ]
--    then
--        mkdir -p $jobsDir/dysnomia.target.wants
--        ln -s ../$jobName.service $jobsDir/dysnomia.target.wants/$jobName.service
--    fi
--    
-+
-     if [ -f $2/etc/socket ]
-     then
-         cp $2/etc/socket $jobsDir/$jobName.socket
-@@ -423,5 +415,5 @@ activateSystemdService()
-     fi
-     
-     systemctl --system daemon-reload
--    systemctl start $startUnit || (removeSystemdService $jobsDir/$jobName.service $2; removeUnprivilegedUserAndGroup; false)
-+    systemctl enable $jobsDir/$jobName.service && systemctl start $startUnit || (removeSystemdService $jobsDir/$jobName.service $2; removeUnprivilegedUserAndGroup; false)
- }
