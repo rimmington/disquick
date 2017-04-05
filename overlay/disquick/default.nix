@@ -8,7 +8,7 @@ in stdenv.mkDerivation rec {
   name = "disquick";
   src = ./.;
   buildInputs = [ python35 help2man cli2man mdocml ronn ];
-  outputs = [ "out" "docdev" ];
+  outputs = [ "out" "devdoc" ];
   installPhase = ''
     mkdir -p $out/bin $out/share/man/man{1,3} $out/libexec/disquick
     substitute ./disenv.py $out/bin/disenv \

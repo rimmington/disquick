@@ -137,7 +137,9 @@ let
     # Additional directories are made inaccessible via ProtectHome
     "/boot"
     "/media"
-    "/etc/dbus-1"
+    /*"/etc/dbus-1" Disabled because it causes the entirety of /etc/static
+                    to be inaccessible. systemd regression in
+                    https://github.com/systemd/systemd/commit/d944dc9553009822deaddec76814f5642a6a8176 */
     "/etc/modprobe.d"
     "/etc/modules-load.d"
     "/etc/postfix"
@@ -180,16 +182,8 @@ let
   ];
   chpst = lib.overrideDerivation runit (o: {
     name = "runit-${o.version}-chpst";
-    # https://github.com/NixOS/nixpkgs/blob/7a37ac15b3fdca4dfa5c16fcc2a4de1294f5dc87/pkgs/tools/system/runit/default.nix
-    phases = [ "unpackPhase" "patchPhase" "buildPhase" "checkPhase" "installPhase" "fixupPhase" ];
-    postPatch = ''
-      cd ${o.name}
-      sed -i 's,-static,,g' src/Makefile
-    '';
-    buildPhase = ''
-      make -C 'src'
-    '';
-    installPhase = "mv src/chpst $out";
+    outputs = [ "out" ];
+    installPhase = "mv chpst $out";
   });
 in {
   inherit attrs exports;

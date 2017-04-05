@@ -4,12 +4,12 @@ set -eu
 user="$1"
 
 apt-get update
-apt-get install -y libsqlite3-dev libgc-dev libssl-dev libbz2-dev libcurl4-openssl-dev liblzma-dev libdbi-perl libdbd-sqlite3-perl libwww-curl-perl libsodium-dev git g++ pkg-config make
+apt-get install -y libsqlite3-dev libgc-dev libssl-dev libbz2-dev libcurl4-openssl-dev liblzma-dev libdbi-perl libdbd-sqlite3-perl libwww-curl-perl libsodium-dev git g++ pkg-config make curl
 
 pushd $(mktemp -d)
-    wget http://nixos.org/releases/nix/nix-1.11.2/nix-1.11.2.tar.xz
-    tar xf nix-1.11.2.tar.xz
-    pushd nix-1.11.2/
+    wget http://nixos.org/releases/nix/nix-1.11.8/nix-1.11.8.tar.xz
+    tar xf nix-1.11.8.tar.xz
+    pushd nix-1.11.8/
         ./configure --enable-gc
         make
         make install
