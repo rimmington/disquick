@@ -1,8 +1,8 @@
-{writeText, lib, stdenv, pkgs, disnix, libxslt}:
+{nixpkgs ? <nixpkgs>, writeText, lib, stdenv, pkgs, disnix, libxslt}:
 {serviceSet, hostname, system}:
 
 let
-  disnixLib = import "${disnix}/share/disnix/lib.nix" { nixpkgs = <nixpkgs>; inherit pkgs; };
+  disnixLib = import "${disnix}/share/disnix/lib.nix" { inherit nixpkgs pkgs; };
   viaXSLT = name: xsl: attrset: stdenv.mkDerivation {
     inherit name;
     xml = builtins.toXML attrset;
