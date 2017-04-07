@@ -1,4 +1,4 @@
-{pkgs ? import <nixpkgs> {}, rustPlatform ? pkgs.rustPlatform, cacert ? pkgs.cacert}:
+{rustPlatform, cacert, dbus, pkgconfig}:
 
 rustPlatform.buildRustPackage {
   name = "disctl";
@@ -7,4 +7,5 @@ rustPlatform.buildRustPackage {
   shellHook = ''
     export SSL_CERT_FILE='${cacert}/etc/ssl/certs/ca-bundle.crt';
   '';
+  buildInputs = [ dbus pkgconfig ];
 }

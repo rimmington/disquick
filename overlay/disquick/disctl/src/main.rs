@@ -1,3 +1,4 @@
+extern crate dbus;
 extern crate docopt;
 extern crate libc;
 extern crate regex;
@@ -52,13 +53,22 @@ enum Error {
     NonZero(Option<i32>),
     NoSuchService,
     UnexpectedOutput(String),
-    IoError(io::Error)
+    IoError(io::Error),
+    DbusError(DbusError)
 }
 
 use Error::*;
 
 impl From<io::Error> for Error {
     fn from(e: io::Error) -> Self { IoError(e) }
+}
+
+impl From<dbus::Error> for Error {
+    fn from(e: dbus::Error) -> Self { DbusError(DbusError::CallError(e)) }
+}
+
+impl From<dbus::arg::TypeMismatchError> for Error {
+    fn from(e: dbus::arg::TypeMismatchError) -> Self { DbusError(DbusError::TypeError(e)) }
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -126,16 +136,140 @@ fn run<T>(cmd: &mut Command) -> Result<T> where T : CommandOut {
     T::run(cmd)
 }
 
-fn disnix_running() -> Result<bool> {
-    match run(Command::new("systemctl").arg("status").arg("disnix.service")) {
-        Ok(Suppress) => Ok(true),
-        Err(NonZero(Some(code))) if code == 3 => Ok(false),
-        Err(e) => Err(e)
+struct Systemd<'a> {
+    conn : &'a dbus::Connection
+}
+
+enum SystemState {
+    Degraded(),
+    Other(String)
+}
+
+impl SystemState {
+    fn from_string(s: String) -> SystemState {
+        if s == "degraded" {
+            SystemState::Degraded()
+        } else {
+            SystemState::Other(s)
+        }
     }
 }
 
-fn service_full_name(name: String) -> Result<String> {
-    if try!(disnix_running()) {
+struct UnitRef {
+    path : dbus::Path<'static>
+}
+
+struct UnitSummary {
+    name : String,
+    desc : String,
+    load_state : String,
+    active_state : String,
+    sub_state : String,
+    reference : UnitRef
+}
+
+#[derive(Debug)]
+enum DbusError {
+    CallError(dbus::Error),
+    TypeError(dbus::arg::TypeMismatchError)
+}
+
+impl From<dbus::Error> for DbusError {
+    fn from(e: dbus::Error) -> Self { DbusError::CallError(e) }
+}
+
+impl From<dbus::arg::TypeMismatchError> for DbusError {
+    fn from(e: dbus::arg::TypeMismatchError) -> Self { DbusError::TypeError(e) }
+}
+
+impl dbus::arg::Arg for UnitSummary {
+    fn arg_type() -> dbus::arg::ArgType { dbus::arg::ArgType::Struct }
+    fn signature() -> dbus::Signature<'static> { dbus::Signature::new("ssssssouso").unwrap() }
+}
+
+impl <'a> UnitSummary {
+    fn read(i : &mut dbus::arg::Iter<'a>) -> std::result::Result<Self, dbus::arg::TypeMismatchError> {
+        let name = try!(i.read());
+        let desc = try!(i.read());
+        let load_state = try!(i.read());
+        let active_state = try!(i.read());
+        let sub_state = try!(i.read());
+        i.next();
+        let path = try!(i.read());
+        Ok(UnitSummary { name : name, desc : desc, load_state : load_state, active_state : active_state, sub_state : sub_state, reference : UnitRef { path : path }})
+    }
+}
+
+impl <'a> dbus::arg::Get<'a> for UnitSummary {
+    fn get(i : &mut dbus::arg::Iter<'a>) -> Option<Self> {
+        UnitSummary::read(i).ok()
+    }
+}
+
+impl <'a> Systemd<'a> {
+    fn new(conn : &'a dbus::Connection) -> Systemd<'a> {
+        Systemd { conn : conn }
+    }
+
+    fn manager_method_call<'g, M, F, R, E>(&self, method : M, f : F) -> std::result::Result<R, E>
+        where M : Into<dbus::Member<'static>>
+            , F : FnOnce(dbus::Message) -> dbus::Message
+            , R : dbus::arg::Arg + dbus::arg::Get<'g>
+            , E : From<dbus::Error> + From<dbus::arg::TypeMismatchError> {
+        let i = dbus::Message::new_method_call("org.freedesktop.systemd1", "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", method).unwrap();
+        let m = f(i);
+        self.conn.send_with_reply_and_block(m, 500)
+            .map_err(E::from)
+            .and_then(|m| m.read1().map_err(E::from))
+    }
+
+    fn manager_get_prop<'g, R, E>(&self, prop : &str) -> std::result::Result<R, E>
+        where R : dbus::arg::Arg + dbus::arg::Get<'g>
+            , E : From<dbus::Error> + From<dbus::arg::TypeMismatchError> {
+        let m = dbus::Message::new_method_call("org.freedesktop.systemd1", "/org/freedesktop/systemd1", "org.freedesktop.DBus.Properties", "Get")
+            .unwrap()
+            .append2("org.freedesktop.systemd1.Manager", prop);
+        match self.conn.send_with_reply_and_block(m, 500) {
+            Err(e) => Err(E::from(e)),
+            Ok(m) => m.read1().map_err(E::from)
+        }
+    }
+
+    fn system_state(&self) -> Result<SystemState> {
+        self.manager_get_prop("SystemState").map(SystemState::from_string)
+    }
+
+    fn unit_by_name(&self, name : &str) -> Result<Option<UnitRef>> {
+        use DbusError::*;
+        let r = self.manager_method_call("GetUnit", |msg| msg.append1(name));
+        // let r = self.conn.method_call_with_args(
+        //     &dbus::Interface::new("org.freedesktop.systemd1.Manager").unwrap()
+        //   , &dbus::Member::new("GetUnit").unwrap()
+        //   , |msg| { msg.append_items(&[name.into()]); });
+        match r {
+            Err(CallError(e)) => if e.name() == Some("org.freedesktop.systemd1.NoSuchUnit") { Ok(None) } else { Err(DbusError(CallError(e))) },
+            Err(e) => Err(DbusError(e)),
+            Ok(p) => Ok(Some(UnitRef { path : p }))
+        }
+    }
+
+    // fn units_by_pattern(&self, pattern : &str) -> Result<Vec<UnitSummary>> {
+    //     self.conn.method_call_with_args(
+    //         &dbus::Interface::new("org.freedesktop.systemd1.Manager").unwrap()
+    //       , &dbus::Member::new("ListUnitsByPatterns").unwrap()
+    //       , |msg| { msg.append_items(&[&[], &[pattern.into()]]); })
+    //       .map_err(DbusError)
+    //       .and_then(|m| m.read1().map_err(DbusTMError))
+    // }
+}
+
+fn disnix_running(systemd : &Systemd) -> Result<bool> {
+    systemd.unit_by_name("disnix.service").map(|r| r.is_some())
+}
+
+fn service_full_name(systemd : &Systemd, name: String) -> Result<String> {
+    // try!(systemd.units_by_pattern("", "disnix-*-service-hello.service"));
+    if try!(disnix_running(systemd)) {
         let out : String = try!(run(Command::new("systemctl").arg("list-units").arg("--no-legend").arg(format!("disnix-*-service-{}.service", name))));
         out.lines()
             .filter_map(|l| {
@@ -253,15 +387,14 @@ fn clear_failed(args: &Args) -> Result<bool> {
     }
 }
 
-fn status(name: Option<&String>) -> Result<()> {
+fn status(systemd: &Systemd, name: Option<&String>) -> Result<()> {
     match run_with_service_optional(name, Command::new("systemctl").arg("--no-pager").arg("status")) {
         Err(NonZero(Some(3))) => return Err(NoSuchService),
         Err(e) => return Err(e),
         Ok(_) => {}
     };
     if let None = name {
-        let any : AnyStdout = try!(run(Command::new("systemctl").arg("is-system-running")));
-        if any.stdout.trim() == "degraded" {
+        if let SystemState::Degraded() = try!(systemd.system_state()) {
             println!("\nSome units have {}:", tty_coloured(Colour::Red, "failed".to_string()));
             let stdout : String = try!(run(Command::new("systemctl").arg("--failed").env("SYSTEMD_COLORS", if stdout_is_tty() { "1" } else { "0" })));
             let re = Regex::new(r"\d loaded units listed").unwrap();
@@ -279,14 +412,16 @@ const ACTIONS: &'static [fn(&Args) -> Result<bool>] = &[ stop, start, journal, c
 fn go() -> Result<()> {
     let usage = if std::env::var("MAN") == Ok("1".to_string()) { USAGE.to_string() } else { USAGE.to_string() + "\nSee the man page for more details." };
     let mut args : Args = docopt::Docopt::new(usage).unwrap().version(Some("disctl 1.0".to_string())).decode().unwrap_or_else(|e| e.exit());
+    let conn = try!(dbus::Connection::get_private(dbus::BusType::System));
+    let systemd = Systemd::new(&conn);
 
     args.arg_service = match args.arg_service {
-        Some(s) => try!(service_full_name(s).map(Some)),
+        Some(s) => try!(service_full_name(&systemd, s).map(Some)),
         None => None
     };
     let something_ran = try!(ACTIONS.iter().fold(Ok(false), |acc, a| acc.and_then(|acc| a(&args).map(|r| r || acc))));
     if ! something_ran {
-        try!(status(args.arg_service.as_ref()));
+        try!(status(&systemd, args.arg_service.as_ref()));
     }
     Ok(())
 }
@@ -297,6 +432,7 @@ fn main() {
         Err(NonZero(_)) => 2,
         Err(NoSuchService) => 3,
         Err(UnexpectedOutput(msg)) => { writeln!(io::stderr(), "{}", msg).unwrap(); 2 } ,
-        Err(IoError(err)) => { writeln!(io::stderr(), "{}", err).unwrap(); 2 }
+        Err(IoError(err)) => { writeln!(io::stderr(), "{}", err).unwrap(); 2 },
+        Err(DbusError(err)) => { writeln!(io::stderr(), "{:?}", err).unwrap(); 2 }
     });
 }
