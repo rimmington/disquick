@@ -129,7 +129,7 @@ fn run<T>(cmd: &mut Command) -> Result<T> where T : CommandOut {
 fn disnix_running() -> Result<bool> {
     match run(Command::new("systemctl").arg("status").arg("disnix.service")) {
         Ok(Suppress) => Ok(true),
-        Err(NonZero(Some(code))) if code == 3 => Ok(false),
+        Err(NonZero(Some(code))) if code == 3 || code == 4 => Ok(false),
         Err(e) => Err(e)
     }
 }
