@@ -1,21 +1,19 @@
 diff --git a/scripts/disnix-copy-closure.in b/scripts/disnix-copy-closure.in
-index 7903434..c6b4ba1 100644
+index ad14a1b..6435147 100644
 --- a/scripts/disnix-copy-closure.in
 +++ b/scripts/disnix-copy-closure.in
-@@ -148,7 +148,15 @@ then
+@@ -147,9 +147,12 @@ then
  
      # Invoke a remote Disnix interface to fetch all the paths that 
      # are not already at the remote machine
 -    invalidPaths=`$interface --target $target --print-invalid $requisites`
-+    remaining="$(fold -sw 130000 <<< $requisites)"  # Prevent "argument list too long"
-+    while [[ ${#remaining} > 0 ]]; do
-+        batch="$(head -n1 <<< "$remaining")"
-+        remaining="$(tail -n+2 <<< "$remaining")"
++    mapfile -t batches <<<$(tr '\n' ' ' <<< $requisites | fold -sw 130000)  # Prevent "argument list too long"
++    for batch in "${batches[@]}"; do
 +        invalidPaths="$invalidPaths $($interface --target $target --print-invalid $batch)"
 +    done
-+
-+    # Trim whitespace via unquoted here string
-+    invalidPaths="$(cat <<< $invalidPaths)"
  
-     if [ "$invalidPaths" != "" ]
+-    if [ "$invalidPaths" != "" ]
++    if [[ ! "$invalidPaths" =~ ^[[:space:]]*$ ]]
      then
+         # Serialise all the missing parts of the closure
+         tmpfilename=`mktemp -p $TMPDIR`
