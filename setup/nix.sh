@@ -45,7 +45,7 @@ mkStickyDir /nix/var/nix/profiles/per-user
 mkStickyDir /nix/var/nix/gcroots/per-user
 
 groupadd -r nixbld
-for n in $(seq 1 10); do useradd -c "Nix build user $n" \
+for n in $(seq 1 2); do useradd -c "Nix build user $n" \
     -d /var/empty -g nixbld -G nixbld -M -N -r -s "$(which nologin)" \
             nixbld$n; done
 
