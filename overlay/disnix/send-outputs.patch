@@ -1,0 +1,13 @@
+diff --git a/scripts/disnix-copy-closure.in b/scripts/disnix-copy-closure.in
+index 6435147..a9f175b 100644
+--- a/scripts/disnix-copy-closure.in
++++ b/scripts/disnix-copy-closure.in
+@@ -143,7 +143,7 @@ then
+     storePath=`nix-store --query --resolve $@`
+ 
+     # Query the requisites of the given component
+-    requisites=`nix-store --query --requisites $storePath`
++    requisites=`nix-store --query --requisites --include-outputs $storePath`
+ 
+     # Invoke a remote Disnix interface to fetch all the paths that 
+     # are not already at the remote machine
