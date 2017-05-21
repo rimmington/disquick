@@ -1,0 +1,15 @@
+diff --git a/src/build/build.c b/src/build/build.c
+index 13cec21..6f2ce9f 100644
+--- a/src/build/build.c
++++ b/src/build/build.c
+@@ -72,8 +72,8 @@ static int realise(const GPtrArray *derivation_array, const GPtrArray *interface
+ {
+     int success;
+     ProcReact_FutureIterator iterator = create_derivation_future_iterator(derivation_array, interface_array, realise_derivation_item, complete_realise_derivation_item, NULL);
+-    procreact_fork_in_parallel_buffer_and_wait(&iterator);
+-    
++    procreact_fork_buffer_and_wait_in_parallel_limit(&iterator, 2);
++
+     g_print("[coordinator]: Realising store derivation files...\n");
+     
+     success = derivation_iterator_has_succeeded(iterator.data);
