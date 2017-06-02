@@ -3,7 +3,7 @@ set -eu
 
 user="$1"
 
-export NIX_PATH=nixpkgs=https://github.com/rimmington/nixpkgs/archive/ab1078806ecf7f1ef28b3a0bd7cda1e9af8e7875.tar.gz
+export NIX_PATH=nixpkgs=https://github.com/rimmington/nixpkgs/archive/3862d080dda2950e44bbc0b66da33d992aaa095d.tar.gz
 
 cloneDir="/usr/local/share/disquick"
 git clone --depth 1 https://github.com/rimmington/disquick $cloneDir
