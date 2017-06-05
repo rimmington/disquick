@@ -16,7 +16,9 @@ def run(filename, target, system, ssh_user=None, keep_only=None, build_on_remote
     filename = os.path.abspath(filename)
 
     remote = disquick.Remote(target, system, ssh_user=ssh_user)
-    deployment = disquick.Deployment(filename, remote, build_on_remote=build_on_remote)
+    deployment = disquick.Deployment(filename, remote
+        , build_on_remote=build_on_remote
+        , use_binary_caches=use_binary_caches)
     deployment.deploy(keep_only=keep_only)
 
 def main(argv):
