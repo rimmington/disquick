@@ -65,7 +65,7 @@ class Remote():
     def from_manifest_file(cls, manifest, ssh_user=None):
         root = xml.parse(manifest).getroot()
         target = root.find('./targets/target')
-        hostname = target.find('hostname').text
+        hostname = target.find('properties/hostname').text
         system = target.find('system').text
         return cls(hostname, system, ssh_user=ssh_user)
 
