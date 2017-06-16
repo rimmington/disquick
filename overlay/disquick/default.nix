@@ -43,6 +43,7 @@ in stdenv.mkDerivation rec {
     in ''
       [ -e ${props.manifest} ]
       [ -e ${props.distributedDerivation} ]
+      ${python35}/bin/python test.py ${props.manifest}
     '';
   doCheck = true;
 
