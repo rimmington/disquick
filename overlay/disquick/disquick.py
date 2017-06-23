@@ -79,7 +79,7 @@ class Remote():
         print('[target: {}]: Running garbage collection'.format(self.target))
         interface = 'disnix-client' if self.target == 'localhost' else 'disnix-ssh-client'
         with tempfile.TemporaryDirectory() as d:
-            infrastructure = writefile(d + '/infrastructure.nix', '{{ target = {{ hostname = "{}"; system = "{}"; }}; }}'.format(self.target, self.system))
+            infrastructure = writefile(d + '/infrastructure.nix', '{{ target = {{ properties.hostname = "{}"; system = "{}"; }}; }}'.format(self.target, self.system))
             self.run_disnix(['disnix-collect-garbage', '--interface', interface, '-d', infrastructure])
 
 class Deployment():
