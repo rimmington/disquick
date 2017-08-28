@@ -11,7 +11,7 @@ use std::process::Command;
 const USAGE: &'static str = "
 Usage:
   disctl [<service>]
-  disctl [-e] [-l] [-j | -f] <service>
+  disctl [-e] [-l] [-j | -n | -f ] <service>
   disctl (--cat | --cat-script | --cat-pre | --cat-post) <service>
   disctl --clear-failed [<service>]
   disctl (-h | --version)
@@ -22,6 +22,7 @@ Options:
   -e --stop         End the service
   -l --start        Launch the service
   -j --journal      Show service journal
+  -n --recent       Show 1000 most recent journal entries
   -f --follow       Follow service journal
   --cat             Show service systemd unit file
   --cat-script      Show service script
@@ -38,6 +39,7 @@ struct Args {
     flag_stop: bool,
     flag_start: bool,
     flag_journal: bool,
+    flag_recent: bool,
     flag_follow: bool,
     flag_cat: bool,
     flag_cat_script: bool,
@@ -181,8 +183,8 @@ fn start(args: &Args) -> Result<bool> {
 }
 
 fn journal(args: &Args) -> Result<bool> {
-    if args.flag_journal || args.flag_follow {
-        run_with_service(args, Command::new("sudo").arg("journalctl").arg(if args.flag_follow { "-fu" } else { "-u" })).map(|_| true)
+    if args.flag_journal || args.flag_follow || args.flag_recent {
+        run_with_service(args, Command::new("sudo").arg("journalctl").arg(if args.flag_follow { "-fu" } else if args.flag_recent { "-eu" } else { "-u" })).map(|_| true)
     } else {
         Ok(false)
     }
