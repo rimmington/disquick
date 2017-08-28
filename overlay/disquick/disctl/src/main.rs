@@ -11,7 +11,7 @@ use std::process::Command;
 const USAGE: &'static str = "
 Usage:
   disctl [<service>]
-  disctl [-e] [-l] [-j | -f] <service>
+  disctl [-e] [-l] [-j | -n | -f ] <service>
   disctl (--cat | --cat-script | --cat-pre | --cat-post) <service>
   disctl --clear-failed [<service>]
   disctl (-h | --version)
@@ -22,6 +22,7 @@ Options:
   -e --stop         End the service
   -l --start        Launch the service
   -j --journal      Show service journal
+  -n --recent       Show 1000 most recent journal entries
   -f --follow       Follow service journal
   --cat             Show service systemd unit file
   --cat-script      Show service script
@@ -38,6 +39,7 @@ struct Args {
     flag_stop: bool,
     flag_start: bool,
     flag_journal: bool,
+    flag_recent: bool,
     flag_follow: bool,
     flag_cat: bool,
     flag_cat_script: bool,
@@ -164,16 +166,12 @@ fn run_with_service_optional(name: Option<&String>, cmd: &mut Command) -> Result
     run(cmd)
 }
 
-fn stop(args: &Args) -> Result<bool> {
-    if args.flag_stop {
+fn service_control(args: &Args) -> Result<bool> {
+    if args.flag_stop && args.flag_start {
+        run_with_service(args, Command::new("sudo").arg("systemctl").arg("restart")).map(|_| true)
+    } else if args.flag_stop {
         run_with_service(args, Command::new("sudo").arg("systemctl").arg("stop")).map(|_| true)
-    } else {
-        Ok(false)
-    }
-}
-
-fn start(args: &Args) -> Result<bool> {
-    if args.flag_start {
+    } else if args.flag_start {
         run_with_service(args, Command::new("sudo").arg("systemctl").arg("start")).map(|_| true)
     } else {
         Ok(false)
@@ -181,8 +179,8 @@ fn start(args: &Args) -> Result<bool> {
 }
 
 fn journal(args: &Args) -> Result<bool> {
-    if args.flag_journal || args.flag_follow {
-        run_with_service(args, Command::new("sudo").arg("journalctl").arg(if args.flag_follow { "-fu" } else { "-u" })).map(|_| true)
+    if args.flag_journal || args.flag_follow || args.flag_recent {
+        run_with_service(args, Command::new("sudo").arg("journalctl").arg(if args.flag_follow { "-fu" } else if args.flag_recent { "-eu" } else { "-u" })).map(|_| true)
     } else {
         Ok(false)
     }
@@ -274,7 +272,7 @@ fn status(name: Option<&String>) -> Result<()> {
     Ok(())
 }
 
-const ACTIONS: &'static [fn(&Args) -> Result<bool>] = &[ stop, start, journal, cat, cat_script, clear_failed ];
+const ACTIONS: &'static [fn(&Args) -> Result<bool>] = &[ service_control, journal, cat, cat_script, clear_failed ];
 
 fn go() -> Result<()> {
     let usage = if std::env::var("MAN") == Ok("1".to_string()) { USAGE.to_string() } else { USAGE.to_string() + "\nSee the man page for more details." };
