@@ -166,16 +166,12 @@ fn run_with_service_optional(name: Option<&String>, cmd: &mut Command) -> Result
     run(cmd)
 }
 
-fn stop(args: &Args) -> Result<bool> {
-    if args.flag_stop {
+fn service_control(args: &Args) -> Result<bool> {
+    if args.flag_stop && args.flag_start {
+        run_with_service(args, Command::new("sudo").arg("systemctl").arg("restart")).map(|_| true)
+    } else if args.flag_stop {
         run_with_service(args, Command::new("sudo").arg("systemctl").arg("stop")).map(|_| true)
-    } else {
-        Ok(false)
-    }
-}
-
-fn start(args: &Args) -> Result<bool> {
-    if args.flag_start {
+    } else if args.flag_start {
         run_with_service(args, Command::new("sudo").arg("systemctl").arg("start")).map(|_| true)
     } else {
         Ok(false)
@@ -276,7 +272,7 @@ fn status(name: Option<&String>) -> Result<()> {
     Ok(())
 }
 
-const ACTIONS: &'static [fn(&Args) -> Result<bool>] = &[ stop, start, journal, cat, cat_script, clear_failed ];
+const ACTIONS: &'static [fn(&Args) -> Result<bool>] = &[ service_control, journal, cat, cat_script, clear_failed ];
 
 fn go() -> Result<()> {
     let usage = if std::env::var("MAN") == Ok("1".to_string()) { USAGE.to_string() } else { USAGE.to_string() + "\nSee the man page for more details." };
