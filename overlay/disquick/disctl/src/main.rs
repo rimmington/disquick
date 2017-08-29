@@ -168,11 +168,11 @@ fn run_with_service_optional(name: Option<&String>, cmd: &mut Command) -> Result
 
 fn service_control(args: &Args) -> Result<bool> {
     if args.flag_stop && args.flag_start {
-        run_with_service(args, Command::new("sudo").arg("systemctl").arg("restart")).map(|_| true)
+        run_with_service(args, priv_command("systemctl").arg("restart")).map(|_| true)
     } else if args.flag_stop {
-        run_with_service(args, Command::new("sudo").arg("systemctl").arg("stop")).map(|_| true)
+        run_with_service(args, priv_command("systemctl").arg("stop")).map(|_| true)
     } else if args.flag_start {
-        run_with_service(args, Command::new("sudo").arg("systemctl").arg("start")).map(|_| true)
+        run_with_service(args, priv_command("systemctl").arg("start")).map(|_| true)
     } else {
         Ok(false)
     }
@@ -180,7 +180,7 @@ fn service_control(args: &Args) -> Result<bool> {
 
 fn journal(args: &Args) -> Result<bool> {
     if args.flag_journal || args.flag_follow || args.flag_recent {
-        run_with_service(args, Command::new("sudo").arg("journalctl").arg(if args.flag_follow { "-fu" } else if args.flag_recent { "-eu" } else { "-u" })).map(|_| true)
+        run_with_service(args, priv_command("journalctl").arg(if args.flag_follow { "-fu" } else if args.flag_recent { "-eu" } else { "-u" })).map(|_| true)
     } else {
         Ok(false)
     }
@@ -243,9 +243,26 @@ fn tty_coloured(colour: Colour, msg: String) -> String {
     }
 }
 
+// Never fails
+fn geteuid() -> libc::uid_t {
+    unsafe {
+        libc::geteuid()
+    }
+}
+
+fn priv_command(cmd: &str) -> Command {
+    if geteuid() == 0 {
+        Command::new(cmd)
+    } else {
+        let mut c = Command::new("sudo");
+        c.arg(cmd);
+        c
+    }
+}
+
 fn clear_failed(args: &Args) -> Result<bool> {
     if args.flag_clear_failed {
-        run_with_service_optional(args.arg_service.as_ref(), Command::new("sudo").arg("systemctl").arg("reset-failed")).map(|_| true)
+        run_with_service_optional(args.arg_service.as_ref(), priv_command("systemctl").arg("reset-failed")).map(|_| true)
     } else {
         Ok(false)
     }
